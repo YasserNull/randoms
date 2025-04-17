@@ -1,4 +1,8 @@
 # test
+
+
+![Downloads](https://img.shields.io/github/downloads/Magisk-Modules-Alt-Repo/open_webview/total?label=Downloads) 
+
 عدد تحميلات مود فيزياء
 
 ![Downloads](https://img.shields.io/github/downloads/YasserNull/Physics-Addon/total?label=Downloads) 
