@@ -9,5 +9,5 @@ chroot-distro: Installs Linux distributions in a chroot environment on Android.
   <img src="https://img.icons8.com/color/64/000000/linux.png" alt="Linux"/>
   <img
 <img
-src="https://img.icons8.com/ios-filled/50/000000/like.png" alt="pixel_heart"/> 
+src="https://img.icons8.com/ios-filled/50/000000/pixel-heart.png" alt="pixel_heart"/> 
 <img
