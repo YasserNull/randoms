@@ -14,7 +14,7 @@
 /data/local/chroot-distro/
 ├── .backup/         # Backup folder for distributions
 ├── .rootfs/         # Minimal root filesystem for bootstrapping distributions
-├── <distro>/        # Folder for downloaded distributions (e.g., ubuntu, debian)
+├── <distro>/        # Folder for installed distributions (e.g., ubuntu, debian)
 ├── <distro>/        # Another distribution folder
 ├── android_bind     # Script to bind Android environment with chroot
 ├── suid             # Auto-fix for SUID issue
