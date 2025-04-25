@@ -26,7 +26,7 @@ ___
 ## Requirements
 
 ### Rooted Android Device
-All root implementations are compatible.
+All root implementations are compatible. 
 You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
 
 ### Busybox for Android NDK
