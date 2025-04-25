@@ -2,7 +2,10 @@
   <tr>
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" style="object-fit: contain;"><br><b>Ubuntu</b><br><code>ubuntu</code></td>
    <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="500" style="object-fit: contain;"><br><b>Arch</b><br><code>arch</code></td>
-
+<td align="center" style="width:100px; height:100px;">
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" style="width:48px; height:48px; display:block; margin:auto;"><br>
+  <b>اسم</b><br><code>الكود</code>
+</td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" style="object-fit: contain;"><br><b>Kali</b><br><code>kali</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" style="width:48px; height:48px; object-fit:contain;"><br><b>Arch</b><br><code>arch</code></td>
 
