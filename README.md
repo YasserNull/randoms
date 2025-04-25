@@ -23,10 +23,9 @@
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
 ___
-
 You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
 ## Usage Warning
-
+---
 ### Notice
 chroot-distro requires root access to function. While running as root:
 * There's a small possibility of unintended file deletion
