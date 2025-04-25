@@ -19,5 +19,5 @@
 ├── android_bind     # Script to bind Android environment with chroot
 ├── suid             # Auto-fix for SUID issue
 └── ram              # RAM disk setup for performance optimization
-
+```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
