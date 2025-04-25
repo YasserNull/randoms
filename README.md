@@ -31,7 +31,7 @@ All root implementations are compatible.
 You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
 
 ### Busybox for Android NDK
-You need a recent version of the ![Busybox for Android NDK)[] by ![osm0sis]() Magisk module installed.
+You need a recent version of the ![Busybox for Android NDK]() by ![osm0sis]() Magisk module installed.
 * **Recommended:** v1.36.1 is confirmed to work.
 * **Avoid:** v1.32.1 is known to cause issues.
 * **Important:** Using an outdated version can lead to problems, such as difficulties downloading the rootfs.
