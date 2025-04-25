@@ -62,48 +62,5 @@ Binding all Android root directories not mounted by default for full environment
 
 ## Supported Distributions
 
-<div style="display: flex; overflow-x: auto; gap: 20px; padding: 10px;">
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/kali.png" width="48"/><br/>
-    <sub>Kali</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/parrot.png" width="48"/><br/>
-    <sub>Parrot</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/alpine.png" width="48"/><br/>
-    <sub>Alpine</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/arch.png" width="48"/><br/>
-    <sub>Arch</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/centos.png" width="48"/><br/>
-    <sub>CentOS</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/debian.png" width="48"/><br/>
-    <sub>Debian</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/fedora.png" width="48"/><br/>
-    <sub>Fedora</sub>
-  </div>
-
-  <div align="center">
-    <img src="https://raw.githubusercontent.com/ogham/exa/master/icons/ubuntu.png" width="48"/><br/>
-    <sub>Ubuntu</sub>
-  </div>
-
-  <!-- أكمل للباقي بنفس الطريقة -->
-
-</div>
+![Ubuntu](https://cdn.simpleicons.org/ubuntu/E95420.svg)
+ 
