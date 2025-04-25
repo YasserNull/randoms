@@ -55,7 +55,7 @@ As they say: ***With great power comes great responsibility.***
 ```
 
 ### Optional Mounts
-use `android-bind <enable|disable>`: 
+use `chroot-distro android-bind <enable|disable>`: 
 
 Binding all Android root directories not mounted by default for full environment access. 
 
