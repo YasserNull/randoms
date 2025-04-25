@@ -41,4 +41,21 @@ Before running chroot-distro:
 This warning applies to all root-level operations, not just chroot-distro.
 
 As they say: ***With great power comes great responsibility.***
+## Android Paths
+
+### System Points
+```
+/chroot-distro/<distro>
+├── /dev
+├── /sys
+├── /proc
+├── /dev/pts
+├── /sdcard
+└── /storage
+```
+
+### Optional Mounts
+use `android-bind <enable|disable>`: 
+
+Binding all Android root directories not mounted by default for full environment access. 
 
