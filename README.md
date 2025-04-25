@@ -145,3 +145,19 @@ Binding all Android root directories not mounted by default for full environment
 </div>
 
 </div>
+
+<div style="display: flex; overflow-x: auto; gap: 16px; padding: 10px;">
+
+<span style="text-align: center;">
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48"><br>
+  <strong>Kali</strong><br><code>kali</code>
+</span>
+
+<span style="text-align: center;">
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48"><br>
+  <strong>Ubuntu</strong><br><code>ubuntu</code>
+</span>
+
+<!-- زيد الباقي بنفس الشكل -->
+
+</div>
