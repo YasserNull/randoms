@@ -65,12 +65,12 @@ Binding all Android root directories not mounted by default for full environment
 <table>
 <tr>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48"><br><b>Ubuntu</b><br><code>ubuntu</code></td>
-<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="60" height="60"><br><b>Arch</b><br><code>arch</code></td>
+<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48"><br><b>Arch</b><br><code>arch</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48"><br><b>Fedora</b><br><code>fedora</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48" height="48"><br><b>Debian</b><br><code>debian</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48"><br><b>CentOS</b><br><code>centos</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png" width="48" height="48"><br><b>Rocky</b><br><code>rocky</code></td>
-<td align="center" style="width: 90px;"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48"><br><b>CentOS Stream</b><br><code>centos_stream</code></td>
+<td align="center" style="width: 100px;"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48"><br><b>CentOS Stream</b><br><code>centos_stream</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/manjaro.png" width="48" height="48"><br><b>Manjaro</b><br><code>manjaro</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" height="48"><br><b>Kali</b><br><code>kali</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/parrot_security.png" width="48" height="48"><br><b>Parrot</b><br><code>parrot</code></td>
@@ -83,6 +83,6 @@ Binding all Android root directories not mounted by default for full environment
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gentoo.png" width="48" height="48"><br><b>Gentoo</b><br><code>gentoo</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png" width="48" height="48"><br><b>Artix</b><br><code>artix</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png" width="48" height="48"><br><b>Adélie</b><br><code>adelie</code></td>
-<td align="center" style="width: 90px;"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="48"><br><b>Void</b><br><code>void</code></td>
+<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="48"><br><b>Void</b><br><code>void</code></td>
 </tr>
 </table>
