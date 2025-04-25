@@ -4,7 +4,7 @@
    <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="500" style="object-fit: contain;"><br><b>Arch</b><br><code>arch</code></td>
 
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" style="object-fit: contain;"><br><b>Kali</b><br><code>kali</code></td>
-<td align="center"><img src="https://.../arch_linux.png" style="width:48px; height:48px; object-fit:contain;"><br><b>Arch</b><br><code>arch</code></td>
+<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" style="width:48px; height:48px; object-fit:contain;"><br><b>Arch</b><br><code>arch</code></td>
 
 <td align="center"><img src="https://.../kali_linux.png" style="width:48px; height:48px; object-fit:contain;"><br><b>Kali</b><br><code>kali</code></td>
 
