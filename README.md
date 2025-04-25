@@ -23,17 +23,6 @@
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
 ___
-## Requirements
-
-### Rooted Android Device
-All root implementations are compatible.
 
 You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
 
-### Busybox for Android NDK
-You need a recent version of the [Busybox for Android NDK](https://github.com/Magisk-Modules-Repo/busybox-ndk) by [osm0sis](https://github.com/osm0sis) Magisk module installed.
-* **Recommended:** v1.36.1 is confirmed to work.
-### Alternative Busybox
-Using the Busybox provided by:
-* Magisk/KernelSU/APatch 
-(without the *Busybox for Android NDK* module) is supported by the community, but it might introduce bugs during use.
