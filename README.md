@@ -69,6 +69,7 @@ Binding all Android root directories not mounted by default for full environment
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48"><br><b>Arch</b><br><code>archlinux</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/backbox_linux.png" width="48"><br><b>BackBox</b><br><code>backbox</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48"><br><b>CentOS</b><br><code>centos</code></td>
+<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48"><br><b>CentOS</b><br><code>centos stream</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chimera_linux.png" width="48"><br><b>Chimera</b><br><code>chimera</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48"><br><b>Debian</b><br><code>debian</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/deepin.png" width="48"><br><b>Deepin</b><br><code>deepin</code></td>
