@@ -16,8 +16,8 @@
 ├── .rootfs/         # Minimal root filesystem for bootstrapping distributions
 ├── <distro>/        # Folder for installed distributions (e.g., ubuntu, debian)
 ├── <distro>/        # Another distribution folder
-├── android_bind     # Script to bind Android environment with chroot
-├── suid             # Auto-fix for SUID issue
-└── ram              # RAM disk setup for performance optimization
+├── android_bind     # Check file To bind Android environment with chroot
+├── suid             # Check file to auto-fix for SUID issue
+└── ram              # Check file RAM disk setup for performance optimization
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
