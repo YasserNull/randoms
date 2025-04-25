@@ -8,3 +8,4 @@
 ![](https://github.com/YasserNull/test/blob/main/20250425_092417.jpg)
 
 ***chroot-distro***: Installs Gnu/Linux distributions in a chroot environment on Android.
+> Idea inspired by [proot-distro](https://github.com/termux/proot-distro). 
