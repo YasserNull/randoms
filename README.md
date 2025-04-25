@@ -70,7 +70,7 @@ Binding all Android root directories not mounted by default for full environment
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48"><br><b>Debian</b><br><code>debian</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48"><br><b>CentOS</b><br><code>centos</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png" width="48"><br><b>Rocky</b><br><code>rocky</code></td>
-<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos_stream.png" width="48"><br><b>CentOS Stream</b><br><code>centos_stream</code></td>
+<td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48"><br><b>CentOS Stream</b><br><code>centos_stream</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/manjaro.png" width="48"><br><b>Manjaro</b><br><code>manjaro</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48"><br><b>Kali</b><br><code>kali</code></td>
 <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/parrot_security.png" width="48"><br><b>Parrot</b><br><code>parrot</code></td>
