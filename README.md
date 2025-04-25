@@ -36,4 +36,4 @@ You need a recent version of the [Busybox for Android NDK](https://github.com/Ma
 ### Alternative Busybox
 Using the Busybox provided by:
 * Magisk/KernelSU/APatch 
-(without the "Busybox for Android NDK" module) is supported by the community, but it might introduce bugs during use.
+(without the -Busybox for Android NDK- module) is supported by the community, but it might introduce bugs during use.
