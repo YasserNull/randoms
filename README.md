@@ -9,3 +9,15 @@
 
 ***chroot-distro***: Installs Gnu/Linux distributions in a chroot environment on Android.
 > Idea inspired by [proot-distro](https://github.com/termux/proot-distro). 
++ Directory Structure
+```
+/data/local/chroot-distro/
+├── .backup/         # Backup folder for distributions
+├── .rootfs/         # Minimal root filesystem for bootstrapping distributions
+├── <distro>/        # Folder for downloaded distributions (e.g., ubuntu, debian)
+├── <distro>/        # Another distribution folder
+├── android_bind     # Script to bind Android environment with chroot
+├── suid             # Auto-fix for SUID issue
+└── ram              # RAM disk setup for performance optimization
+
+System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
