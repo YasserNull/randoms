@@ -1,4 +1,4 @@
-<table style="table-layout: fixed; width: 500px;">
+<table style="table-layout: fixed; width: 600px;">
   <colgroup>
     <col style="width: 100px;">
     <col style="width: 100px;">
