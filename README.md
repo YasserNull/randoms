@@ -1,7 +1,7 @@
-<table>
+<table style="table-layout: fixed; width: 100%;">
   <colgroup>
     <col span="10">
-    <col width="400px">
+    <col style="width: 100px;">
     <col span="9">
   </colgroup>
   <tr>
