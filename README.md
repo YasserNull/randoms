@@ -18,9 +18,9 @@
     <td></td>
   </tr>
   <tr>
-    <td align="center">id:cat</td>
-    <td align="center">id:dog</td>
-    <td align="center">id:banana</td>
+    <td align="center"><code>id:cat</code></td>
+    <td align="center"><code>id:dog</code></td>
+    <td align="center"><code>id:banana</code></td>
     <td></td>
   </tr>
 </table>
