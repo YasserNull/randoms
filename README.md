@@ -4,7 +4,7 @@
     <col style="width: 100px;">
     <col style="width: 100px;">
     <col style="width: 100px;">
-    <col style="width: 100px;">
+    <col style="width: 200px;">
   </colgroup>
   <tr>
     <td align="center">
