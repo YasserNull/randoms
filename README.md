@@ -23,7 +23,6 @@
     <td align="center"><code>debian</code></td>
     <td align="center"><code>centos</code></td>
     <td align="center"><code>rocky</code></td>
-    <td align="center"><code>centos_stream</code></td>
     <td></td>
   </tr>
 </table>
