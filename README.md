@@ -3,7 +3,7 @@
     <td align="center" style="width:150px; height:150px; border:1px solid black;">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine_linux.png" width="48" height="48"><br><b>Alpine</b><br><code>alpine</code>
     </td>  
-    <td align="center" style="width:400px; height:400px; border:1px solid black;">
+    <td align="center" style="width:500px; height:500px; border:1px solid black;">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48"><br><b>CentOS Stream</b><br><code>centos_stream</code>
     </td>  
     <td align="center" style="width:150px; height:150px; border:1px solid black;">
