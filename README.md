@@ -96,5 +96,11 @@
   <code>centos_stream</code>
   <span style="display: none;">نص مخفي هنا</span>
 </td>
+<td align="center">
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43" style="margin-bottom: 10px;"><br>
+  <b>Void</b><br>
+  <code>void</code>
+  <span style="display: none;">نص مخفي هنا</span>
+</td>
   </tr>
 </table>
