@@ -19,7 +19,7 @@
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gentoo.png" width="48" height="48" style="object-fit: contain;"><br><b>Gentoo</b><br><code>gentoo</code></td>  
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png" width="48" height="48" style="object-fit: contain;"><br><b>Artix</b><br><code>artix</code></td>  
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png" width="48" height="48" style="object-fit: contain;"><br><b>Adélie</b><br><code>adelie</code></td>  
-   <td align="center" style="height:80px; width:150px;">
+   <td align="center" style="height:80px; width:300px;">
   <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="48" style="object-fit: contain;"><br>
   <b>Void</b><br>
   <code>void linux</code>
