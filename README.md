@@ -1,4 +1,4 @@
-# جدول الحروف بحجم ثابت
+# جدول الحروف مع D بحجم 200
 
 <table border="1" cellpadding="0" cellspacing="0">
   <colgroup>
@@ -7,40 +7,23 @@
     <col width="50">
     <col width="50">
     <col width="50">
+    <col width="200">  <!-- العمود السادس لحرف D -->
   </colgroup>
   <tr>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">H</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">E</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">L</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">L</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">O</font></td>
+    <td align="center" valign="middle">H</td>
+    <td align="center" valign="middle">E</td>
+    <td align="center" valign="middle">L</td>
+    <td align="center" valign="middle">L</td>
+    <td align="center" valign="middle">O</td>
+    <td align="center" valign="middle" height="200"><h1>D</h1></td>
   </tr>
   <tr>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">W</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">O</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">R</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">L</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">D</font></td>
+    <td align="center" valign="middle">W</td>
+    <td align="center" valign="middle">O</td>
+    <td align="center" valign="middle">R</td>
+    <td align="center" valign="middle">L</td>
+    <td align="center" valign="middle">D</td>
+    <td></td>  <!-- خلية فاضية للصف الثاني -->
   </tr>
-  <tr>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">C</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">O</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">D</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">E</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">S</font></td>
-  </tr>
-  <tr>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">T</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">E</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">S</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">T</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">A</font></td>
-  </tr>
-  <tr>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">A</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">P</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">P</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">L</font></td>
-    <td width="50" height="50" align="center" valign="middle"><font size="5">E</font></td>
-  </tr>
+  <!-- باقي الصفوف حسب الحاجة -->
 </table>
