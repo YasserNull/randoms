@@ -87,8 +87,8 @@
     </td>  
 <td align="center">
   <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43" style="margin-bottom: 10px;"><br>
-  <b>CentOS Stream</b><br>
-  <code>centos_stream</code>
+  <b>Void</b><br>
+  <code>void</code>
 </td>
   </tr>
 </table>
