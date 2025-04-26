@@ -1,9 +1,42 @@
-| ![Ubuntu](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png) | ![Arch](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png) | ![Fedora](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png) | ![Debian](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png) | ![CentOS](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png) | ![Rocky](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png) |
-| --- | --- | --- | --- | --- | --- |
-| **Ubuntu**<br>`ubuntu` | **Arch**<br>`arch` | **Fedora**<br>`fedora` | **Debian**<br>`debian` | **CentOS**<br>`centos` | **Rocky**<br>`rocky` |
-| ![CentOS Stream](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png) | ![Manjaro](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/manjaro.png) | ![Kali](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png) | ![Parrot](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/parrot_security.png) | ![Alpine](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine_linux.png) | ![OpenSUSE](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/opensuse.png) |
-| **CentOS Stream**<br>`centos_stream` | **Manjaro**<br>`manjaro` | **Kali**<br>`kali` | **Parrot**<br>`parrot` | **Alpine**<br>`alpine` | **OpenSUSE**<br>`opensuse` |
-| ![Deepin](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/deepin.png) | ![BackBox](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/backbox_linux.png) | ![Chimera](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chimera_linux.png) | ![OpenKylin](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/openkylin.png) | ![Gentoo](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gentoo.png) | ![Artix](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png) |
-| **Deepin**<br>`deepin` | **BackBox**<br>`backbox` | **Chimera**<br>`chimera` | **OpenKylin**<br>`openkylin` | **Gentoo**<br>`gentoo` | **Artix**<br>`artix` |
-| ![Adélie](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png) | ![Void](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png) |  |  |  |  |
-| **Adélie**<br>`adelie` | **Void**<br>`void` |  |  |  |  |
+<div style="overflow-x: auto; white-space: nowrap;">
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48">
+  <b>Ubuntu</b><br><code>ubuntu</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48">
+  <b>Arch</b><br><code>arch</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48">
+  <b>Fedora</b><br><code>fedora</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48" height="48">
+  <b>Debian</b><br><code>debian</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48">
+  <b>CentOS</b><br><code>centos</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png" width="48" height="48">
+  <b>Rocky</b><br><code>rocky</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48">
+  <b>CentOS Stream</b><br><code>centos_stream</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/manjaro.png" width="48" height="48">
+  <b>Manjaro</b><br><code>manjaro</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" height="48">
+  <b>Kali</b><br><code>kali</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/parrot_security.png" width="48" height="48">
+  <b>Parrot</b><br><code>parrot</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine_linux.png" width="48" height="48">
+  <b>Alpine</b><br><code>alpine</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/opensuse.png" width="48" height="48">
+  <b>OpenSUSE</b><br><code>opensuse</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/deepin.png" width="48" height="48">
+  <b>Deepin</b><br><code>deepin</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/backbox_linux.png" width="48" height="48">
+  <b>BackBox</b><br><code>backbox</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chimera_linux.png" width="48" height="48">
+  <b>Chimera</b><br><code>chimera</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/openkylin.png" width="48" height="48">
+  <b>OpenKylin</b><br><code>openkylin</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gentoo.png" width="48" height="48">
+  <b>Gentoo</b><br><code>gentoo</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png" width="48" height="48">
+  <b>Artix</b><br><code>artix</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png" width="48" height="48">
+  <b>Adélie</b><br><code>adelie</code>&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43">
+  <b>Void</b><br><code>void</code>
+</div>
