@@ -4,11 +4,11 @@
 
 <table>
   <tr>
-    <td style="width: 20%; text-align: center;">hello</td>
-    <td style="width: 20%; text-align: center;">world</td>
-    <td style="width: 20%; text-align: center;">code</td>
-    <td style="width: 20%; text-align: center;">test</td>
-    <td style="width: 20%; text-align: center;">apple</td>
+    <td style="width: 20%; text-align: center;">h</td>
+    <td style="width: 20%; text-align: center;">w</td>
+    <td style="width: 20%; text-align: center;">c</td>
+    <td style="width: 20%; text-align: center;">c</td>
+    <td style="width: 20%; text-align: center;">x</td>
   </tr>
   <tr>
     <td style="width: 20%; text-align: center;">green</td>
