@@ -18,7 +18,7 @@
   </colgroup>
   <tr>
     <td align="center">
-      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48"><br><b>Ubuntu</b><br><code>ubuntu</code>
+      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48"><br><b>Ubuntu</b><br>
     </td>
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48"><br><b>Arch</b><br><code>arch</code>
