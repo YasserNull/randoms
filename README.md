@@ -1,6 +1,6 @@
 <table>
   <colgroup>
-    <col width="100"><col width="100"><col width="100"><col width="300">
+    <col width="200"><col width="100"><col width="100"><col width="300">
   </colgroup>
   <tr>
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="50"><br>Ubuntu</td>
