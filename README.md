@@ -29,7 +29,7 @@ You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager,
 
 ### System Points
 ```
-/chroot-distro/<distro>
+/data/local/chroot-distro/<distro>
 ├── /dev
 ├── /sys
 ├── /proc
