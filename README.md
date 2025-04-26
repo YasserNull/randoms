@@ -117,3 +117,9 @@ chroot-distro backup ubuntu /sdcard/backup
 | Version | v1.3.0 | v1.4.0 | v1.5.0 | Latest |
 |---------|--------|--------|--------|--------|
 | Release | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.5.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
+
+## Screenshot Examples
+- Debian 
+![Debian console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/screenshot/debian.png)
+- Kali Linux 
+![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/screenshot/kali-linux.png)
