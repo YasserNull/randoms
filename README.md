@@ -5,8 +5,8 @@
       <br><b>Ubuntu</b><br><code>ubuntu</code>
     </td>
     <td align="center" style="width: 150px; height: 120px;">
-      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48" style="object-fit: contain;">&nbsp;&nbsp;&nbsp;
-      <br><b>Arch</b><br><code>arch</code>&nbsp;&nbsp;&nbsp;
+      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48" style="object-fit: contain;
+      <br>&nbsp;&nbsp;&nbsp;<b>Arch</b><br><code>arch</code>&nbsp;&nbsp;&nbsp;
     </td>
     <td align="center" style="width: 150px; height: 120px;">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48" style="object-fit: contain;">
