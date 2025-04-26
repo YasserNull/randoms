@@ -1,41 +1,41 @@
-# جدول الكلمات
+# جدول الحروف
 
-هذا هو جدول الكلمات:
+هذا هو جدول الحروف:
 
 <table>
   <tr>
-    <td style="width: 20%; text-align: center;">h</td>
-    <td style="width: 20%; text-align: center;">w</td>
-    <td style="width: 20%; text-align: center;">c</td>
-    <td style="width: 20%; text-align: center;">c</td>
-    <td style="width: 20%; text-align: center;">x</td>
+    <td style="width: 50px; height: 50px; text-align: center;">H</td>
+    <td style="width: 50px; height: 50px; text-align: center;">E</td>
+    <td style="width: 50px; height: 50px; text-align: center;">L</td>
+    <td style="width: 50px; height: 50px; text-align: center;">L</td>
+    <td style="width: 50px; height: 50px; text-align: center;">O</td>
   </tr>
   <tr>
-    <td style="width: 20%; text-align: center;">green</td>
-    <td style="width: 20%; text-align: center;">blue</td>
-    <td style="width: 20%; text-align: center;">red</td>
-    <td style="width: 20%; text-align: center;">yellow</td>
-    <td style="width: 20%; text-align: center;">pink</td>
+    <td style="width: 50px; height: 50px; text-align: center;">W</td>
+    <td style="width: 50px; height: 50px; text-align: center;">O</td>
+    <td style="width: 50px; height: 50px; text-align: center;">R</td>
+    <td style="width: 50px; height: 50px; text-align: center;">L</td>
+    <td style="width: 50px; height: 50px; text-align: center;">D</td>
   </tr>
   <tr>
-    <td style="width: 20%; text-align: center;">desk</td>
-    <td style="width: 20%; text-align: center;">chair</td>
-    <td style="width: 20%; text-align: center;">table</td>
-    <td style="width: 20%; text-align: center;">lamp</td>
-    <td style="width: 20%; text-align: center;">phone</td>
+    <td style="width: 50px; height: 50px; text-align: center;">C</td>
+    <td style="width: 50px; height: 50px; text-align: center;">O</td>
+    <td style="width: 50px; height: 50px; text-align: center;">D</td>
+    <td style="width: 50px; height: 50px; text-align: center;">E</td>
+    <td style="width: 50px; height: 50px; text-align: center;">S</td>
   </tr>
   <tr>
-    <td style="width: 20%; text-align: center;">book</td>
-    <td style="width: 20%; text-align: center;">pen</td>
-    <td style="width: 20%; text-align: center;">paper</td>
-    <td style="width: 20%; text-align: center;">note</td>
-    <td style="width: 20%; text-align: center;">pencil</td>
+    <td style="width: 50px; height: 50px; text-align: center;">T</td>
+    <td style="width: 50px; height: 50px; text-align: center;">E</td>
+    <td style="width: 50px; height: 50px; text-align: center;">S</td>
+    <td style="width: 50px; height: 50px; text-align: center;">T</td>
+    <td style="width: 50px; height: 50px; text-align: center;">A</td>
   </tr>
   <tr>
-    <td style="width: 20%; text-align: center;">m</td>
-    <td style="width: 20%; text-align: center;">d</td>
-    <td style="width: 20%; text-align: center;">s</td>
-    <td style="width: 20%; text-align: center;">b</td>
-    <td style="width: 20%; text-align: center;">m</td>
+    <td style="width: 50px; height: 50px; text-align: center;">A</td>
+    <td style="width: 50px; height: 50px; text-align: center;">P</td>
+    <td style="width: 50px; height: 50px; text-align: center;">P</td>
+    <td style="width: 50px; height: 50px; text-align: center;">L</td>
+    <td style="width: 50px; height: 50px; text-align: center;">E</td>
   </tr>
 </table>
