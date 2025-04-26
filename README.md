@@ -1,5 +1,5 @@
-<div style="width: 100%;">
-  <div style="display: flex; flex-wrap: wrap;">
+<div style="width: 100%; overflow-x: auto">
+  <div style="display: flex; flex-wrap: nowrap;">
     <div style="flex: 0 0 auto; text-align: center; width: 150px; margin: 10px;">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine.png" width="48" height="48" style="object-fit: contain;"><br>
       <b>Alpine</b><br><code>alpine</code>
