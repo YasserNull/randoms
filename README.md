@@ -78,7 +78,7 @@
     </td>
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43" >
-      <b>Void</b><br><code>void</code>
+      <b>Void</b><br><code>void</code><br>
     </td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   </tr>
 </table>
