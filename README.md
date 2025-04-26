@@ -4,38 +4,38 @@
 
 <table>
   <tr>
-    <td style="width: 200px; height: 200px; text-align: center;">H</td>
-    <td style="width: 200px; height: 200px; text-align: center;">E</td>
-    <td style="width: 200px; height: 200px; text-align: center;">L</td>
-    <td style="width: 200px; height: 200px; text-align: center;">L</td>
-    <td style="width: 200px; height: 200px; text-align: center;">O</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">H</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">E</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">L</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">L</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">O</td>
   </tr>
   <tr>
-    <td style="width: 200px; height: 200px; text-align: center;">W</td>
-    <td style="width: 200px; height: 200px; text-align: center;">O</td>
-    <td style="width: 200px; height: 200px; text-align: center;">R</td>
-    <td style="width: 200px; height: 200px; text-align: center;">L</td>
-    <td style="width: 200px; height: 200px; text-align: center;">D</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">W</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">O</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">R</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">L</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">D</td>
   </tr>
   <tr>
-    <td style="width: 200px; height: 200px; text-align: center;">C</td>
-    <td style="width: 200px; height: 200px; text-align: center;">O</td>
-    <td style="width: 200px; height: 200px; text-align: center;">D</td>
-    <td style="width: 200px; height: 200px; text-align: center;">E</td>
-    <td style="width: 200px; height: 200px; text-align: center;">S</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">C</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">O</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">D</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">E</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">S</td>
   </tr>
   <tr>
-    <td style="width: 200px; height: 200px; text-align: center;">T</td>
-    <td style="width: 200px; height: 200px; text-align: center;">E</td>
-    <td style="width: 200px; height: 200px; text-align: center;">S</td>
-    <td style="width: 200px; height: 200px; text-align: center;">T</td>
-    <td style="width: 200px; height: 200px; text-align: center;">A</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">T</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">E</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">S</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">T</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">A</td>
   </tr>
   <tr>
-    <td style="width: 200px; height: 200px; text-align: center;">A</td>
-    <td style="width: 200px; height: 200px; text-align: center;">P</td>
-    <td style="width: 200px; height: 200px; text-align: center;">P</td>
-    <td style="width: 200px; height: 200px; text-align: center;">L</td>
-    <td style="width: 200px; height: 200px; text-align: center;">E</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">A</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">P</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">P</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">L</td>
+    <td style="width: 200px; height: 200px; text-align: center; vertical-align: middle; font-size: 100px;">E</td>
   </tr>
 </table>
