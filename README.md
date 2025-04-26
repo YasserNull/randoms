@@ -12,6 +12,9 @@
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48" style="object-fit: contain;">
       <br><b>Fedora</b><br><code>fedora</code>
     </td>
-    <!-- أضف باقي الخلايا هنا بنفس الطريقة -->
+    <td align="center" style="width: 150px; height: 120px;">
+      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" height="48" style="object-fit: contain;">
+      <br><b>Kali</b><br><code>kali</code>
+    </td>
   </tr>
 </table>
