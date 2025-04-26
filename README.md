@@ -14,8 +14,6 @@
    <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="50" height="50"><br>Fedora</td>
    <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="50" height="50"><br>Debian</td>
    <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="50" height="50"><br>Centos</td>
-   <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png" width="50" height="50"><br>Rocky</td>
-   <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="50" height="50"><br>Centos Stream</td>
     <td></td>
   </tr>
   <tr>
@@ -25,7 +23,6 @@
     <td align="center"><code>debian</code></td>
     <td align="center"><code>centos</code></td>
     <td align="center"><code>rocky</code></td>
-    <td align="center"><code>centos_stream</code></td>
     <td></td>
   </tr>
 </table>
