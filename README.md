@@ -111,7 +111,7 @@ chroot-distro backup ubuntu /sdcard/backup
 *Replace `<distro>` with the desired distribution identifier.*
 
 ## Installation
-1. Download the latest release from the table below.
+1. Download the ![latest release](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest) from the table below.
 2. Install via a module manager (e.g., Magisk) or flash through a custom recovery.
 
 | v1.3.0 | v1.4.0 | v1.5.0 | Latest |
