@@ -114,6 +114,9 @@ chroot-distro backup ubuntu /sdcard/backup
 1. Download the [latest release](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest) from the table below.
 2. Install via a module manager (e.g., Magisk) or flash through a custom recovery.
 
-| v1.3.0 | v1.4.0 | v1.5.0 | Latest |
-|--------|--------|--------|--------|
-| [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.5.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
+| Version | Release |
+|---------|---------|
+| v1.3.0  | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) |
+| v1.4.0  | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) |
+| v1.5.0  | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.5.0/chroot-distro.zip) |
+| Latest  | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
