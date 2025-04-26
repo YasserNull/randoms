@@ -1,7 +1,7 @@
 <table border="1" cellpadding="0" cellspacing="0">
   <colgroup>
     <col width="100">
-    <col width="100">
+    <col width="200">
     <col width="200">
     <col width="200">
   </colgroup>
