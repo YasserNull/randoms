@@ -120,6 +120,7 @@ Default set to enable.
 Auto-fixes the setuid issue.
 
 `chroot-distro ram <enable|disable>`
+
 Default set to enable.
 Binds some paths in the distro to RAM for performance improvement.
 
