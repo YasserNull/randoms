@@ -1,6 +1,6 @@
-<table>
+<table style="table-layout: fixed; width: 500px;">
   <colgroup>
-    <col width="100"><col width="100"><col width="100"><col width="100"><col width="100">
+    <col width="20%"><col width="20%"><col width="20%"><col width="20%"><col width="20%">
   </colgroup>
   <tr>
     <td align="center">
