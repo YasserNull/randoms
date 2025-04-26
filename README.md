@@ -6,7 +6,6 @@
     <col width="100">
     <col width="100">
     <col width="100">
-    <col width="100">
   </colgroup>
   <tr>
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="50" height="50"><br>Ubuntu</td>
