@@ -21,8 +21,8 @@
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png" width="48" height="48" style="object-fit: contain;"><br><b>Adélie</b><br><code>adelie</code></td>  
    <td align="center" style="height:80px; width:300px;">
   <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="48" style="object-fit: contain;"><br>
-  <b>Void</b><br>
-  <code>void linux</code>
+  <b>Void.  </b><br>
+  <b>void linux</b>
 </td>
   </tr>  
 </table>
