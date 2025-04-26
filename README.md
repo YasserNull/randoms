@@ -7,7 +7,7 @@
     <col width="50">
     <col width="50">
     <col width="50">
-    <col width="200">  <!-- العمود السادس لحرف D -->
+    <col width="10">  <!-- العمود السادس لحرف D -->
   </colgroup>
   <tr>
     <td align="center" valign="middle">H</td>
