@@ -1,8 +1,8 @@
 <table>
   <tr>
-    <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine.png" width="48" height="48"><br><b>Alpine</b><br><code>alpine</code></td>
+    <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine_linux.png" width="48" height="48"><br><b>Alpine</b><br><code>alpine</code></td>
     <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/archlinux.png" width="48" height="48"><br><b>Arch Linux</b><br><code>archlinux</code></td>
-    <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix.png" width="48" height="48"><br><b>Artix</b><br><code>artix</code></td>
+    <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png" width="48" height="48"><br><b>Artix</b><br><code>artix</code></td>
     <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48" height="48"><br><b>Debian</b><br><code>debian</code></td>
     <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/deepin.png" width="48" height="48"><br><b>Deepin</b><br><code>deepin</code></td>
     <td align="center" style="width:150px"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48"><br><b>Fedora</b><br><code>fedora</code></td>
