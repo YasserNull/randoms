@@ -112,17 +112,16 @@ chroot-distro backup ubuntu /sdcard/backup
 ### Settings Commands
 
 `chroot-distro android-bind <enable|disable>`
-Default set to enable.
-Binds all Android root directories.
+- Default set to enable.
+- Binds all Android root directories.
 
 `chroot-distro fixsuid <enable|disable>`
-Default set to enable.
-Auto-fixes the setuid issue.
+- Default set to enable.
+- Auto-fixes the setuid issue.
 
 `chroot-distro ram <enable|disable>`
-
-Default set to enable.
-Binds some paths in the distro to RAM for performance improvement.
+- Default set to enable.
+- Binds some paths in the distro to RAM for performance improvement.
 
 ## Installation
 1. Download the [latest release](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest) from the table below.
