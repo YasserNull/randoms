@@ -1,4 +1,3 @@
-ب تحسين هذا readme 
 # chroot-distro
 <p align="center">
   <img src="https://img.shields.io/github/downloads/Magisk-Modules-Alt-Repo/chroot-distro/total?label=Downloads"/>
