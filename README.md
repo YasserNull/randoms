@@ -84,24 +84,17 @@ chroot-distro delete ubuntu
 ```
 # Basic installation
 chroot-distro install <distro>
-# Install with Android mounts
-chroot-distro install --android <distro>
 
 # Reinstall distribution
 chroot-distro reinstall <distro>
-# Force reinstall with Android mounts
-chroot-distro reinstall --android --force <distro>
+# Force reinstall
+chroot-distro reinstall --force <distro>
 
 # Remove distribution
 chroot-distro uninstall <distro>
 # Force uninstall
 chroot-distro uninstall --force <distro>
 ```
-Usage Note:
-+ By default, all Android root directories are not mounted.
-Binding them requires the `-a` or `--android` flag
-+ The reinstall process will stop if files are open or mounts are active. Using `-f` or `--force` will close running processes and unmount active points. For safety, first run without force to see what's running before using the force option.
-
 ### Backup Operations
 ```
 # Create backup
