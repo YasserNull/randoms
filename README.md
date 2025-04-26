@@ -18,10 +18,6 @@
   <tr>
     <td align="center"><code>ubuntu</code></td>
     <td align="center"><code>arch</code></td>
-    <td align="center"><code>fedora</code></td>
-    <td align="center"><code>debian</code></td>
-    <td align="center"><code>centos</code></td>
-    <td align="center"><code>rocky</code></td>
     <td></td>
   </tr>
 </table>
