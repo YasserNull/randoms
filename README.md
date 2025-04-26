@@ -162,32 +162,6 @@ chroot-distro command debian "sudo -i -u root"
 ```
 >*Replace `<distro>` with your chosen distribution identifier.*
 
-## Supported Distributions
-Note: Use lowercase identifiers for it to be properly identified.
-| Distributions   | Identifiers     |
-|----------------|-----------------|
-| Kali Linux     | `kali`         |
-| Parrot OS      | `parrot`       |
-| Alpine Linux   | `alpine`       |
-| Arch Linux     | `archlinux`    |
-| BackBox        | `backbox`      |
-| Centos         | `centos`       |
-| Centos Stream  | `centos_stream`|
-| Artix Linux    | `artix`        |
-| Debian         | `debian`       |
-| Deepin         | `deepin`       |
-| Fedora         | `fedora`       |
-| Manjaro        | `manjaro`      |
-| OpenKylin      | `openkylin`    |
-| OpenSUSE       | `opensuse`     |
-| Pardus         | `pardus`       |
-| Ubuntu         | `ubuntu`       |
-| Void Linux     | `void`         |
-| Rocky Linux    | `rocky`        |
-| Adélie Linux   | `adelie`       |
-| Chimera Linux  | `chimera`      |
-| Gentoo Linux   | `gentoo`       |
-
 ## Download Releases
 
 |   Versions  |   Releases   |
