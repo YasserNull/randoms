@@ -7,7 +7,6 @@
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48" >
       <b>Arch</b><br><code>arch</code>
-      &nbsp;&nbsp;&nbsp;
     </td>
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48" >
@@ -80,6 +79,6 @@
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43" >
       <b>Void</b><br><code>void</code>
-    </td>
+    </td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   </tr>
 </table>
