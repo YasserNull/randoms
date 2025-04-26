@@ -13,14 +13,14 @@
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="50" height="50"><br>dog
     </td>
     <td align="center">
-      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="50" height="50"><br>banana
+      <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="50" height="50"><br>arch 
     </td>
     <td></td>
   </tr>
   <tr>
     <td align="center"><code>id:cat</code></td>
     <td align="center"><code>id:dog</code></td>
-    <td align="center"><code>id:banana</code></td>
+    <td align="center"><code>arch</code></td>
     <td></td>
   </tr>
 </table>
