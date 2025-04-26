@@ -120,6 +120,8 @@ chroot-distro backup ubuntu /sdcard/backup
 
 ## Screenshot Examples
 - Debian 
+
 ![Debian console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/screenshot/debian.png)
 - Kali Linux 
+
 ![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/screenshot/kali-linux.png)
