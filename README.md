@@ -2,7 +2,7 @@
 <table border="0" cellpadding="0" cellspacing="0" style="table-layout: fixed; width: 100%;">
   <colgroup>
     <col span="10">
-    <col width="100">   <!-- Alpine column fixed 100px -->
+    <col width="500">   <!-- Alpine column fixed 100px -->
     <col span="9">
   </colgroup>
   <tr>
