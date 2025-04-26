@@ -1,4 +1,2 @@
-<div style="overflow-x: auto;">
 | <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="50"><br>Ubuntu | <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="100"><br>Arch | <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="50"><br>Fedora | <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="50"><br>Debian | <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Kali_Linux_Logo.png" width="50"><br>Kali | <img src="https://upload.wikimedia.org/wikipedia/commons/3/35/Linux_Mint_logo.svg" width="50"><br>Mint | <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Manjaro-logo.svg" width="50"><br>Manjaro | <img src="https://upload.wikimedia.org/wikipedia/commons/6/66/CentOS_logo.png" width="50"><br>CentOS |
-|--------|--------|--------|--------|--------|--------|--------|--------|
-</div>
+|-------|-------|-------|-------|-------|-------|-------|-------|
