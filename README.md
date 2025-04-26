@@ -32,10 +32,10 @@
     <td style="width: 20%; text-align: center;">pencil</td>
   </tr>
   <tr>
-    <td style="width: 20%; text-align: center;">music</td>
-    <td style="width: 20%; text-align: center;">dance</td>
-    <td style="width: 20%; text-align: center;">song</td>
-    <td style="width: 20%; text-align: center;">beat</td>
-    <td style="width: 20%; text-align: center;">rhythm</td>
+    <td style="width: 20%; text-align: center;">m</td>
+    <td style="width: 20%; text-align: center;">d</td>
+    <td style="width: 20%; text-align: center;">s</td>
+    <td style="width: 20%; text-align: center;">b</td>
+    <td style="width: 20%; text-align: center;">m</td>
   </tr>
 </table>
