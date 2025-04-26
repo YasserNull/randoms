@@ -1,4 +1,21 @@
-<table 
+<table border="1" cellpadding="0" cellspacing="0">
+  <colgroup>
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+    <col width="100">
+  </colgroup>
   <tr>
     <td align="center">
       <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48"><br><b>Ubuntu</b>
