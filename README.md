@@ -1,11 +1,6 @@
-<table style="table-layout: fixed; width: 100%;">
+table>
   <colgroup>
-    <col style="width:100px;">
-    <col style="width:100px;">
-    <col style="width:100px;">
-    <col style="width:100px;">
-    <col style="width:100px;">
-    <col style="width:100px;">
+    <col width="100"><col width="100"><col width="100"><col width="100">
   </colgroup>
   <tr>
     <td align="center"><img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="50"><br>Ubuntu</td>
