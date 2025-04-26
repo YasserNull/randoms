@@ -1,42 +1,41 @@
-<div style="overflow-x: auto; white-space: nowrap;">
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/ubuntu.png" width="48" height="48">
-  <b>Ubuntu</b><br><code>ubuntu</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/arch_linux.png" width="48" height="48">
-  <b>Arch</b><br><code>arch</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/fedora.png" width="48" height="48">
-  <b>Fedora</b><br><code>fedora</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/debian.png" width="48" height="48">
-  <b>Debian</b><br><code>debian</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48">
-  <b>CentOS</b><br><code>centos</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/rocky_linux.png" width="48" height="48">
-  <b>Rocky</b><br><code>rocky</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/centos.png" width="48" height="48">
-  <b>CentOS Stream</b><br><code>centos_stream</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/manjaro.png" width="48" height="48">
-  <b>Manjaro</b><br><code>manjaro</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/kali_linux.png" width="48" height="48">
-  <b>Kali</b><br><code>kali</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/parrot_security.png" width="48" height="48">
-  <b>Parrot</b><br><code>parrot</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/alpine_linux.png" width="48" height="48">
-  <b>Alpine</b><br><code>alpine</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/opensuse.png" width="48" height="48">
-  <b>OpenSUSE</b><br><code>opensuse</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/deepin.png" width="48" height="48">
-  <b>Deepin</b><br><code>deepin</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/backbox_linux.png" width="48" height="48">
-  <b>BackBox</b><br><code>backbox</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chimera_linux.png" width="48" height="48">
-  <b>Chimera</b><br><code>chimera</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/openkylin.png" width="48" height="48">
-  <b>OpenKylin</b><br><code>openkylin</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gentoo.png" width="48" height="48">
-  <b>Gentoo</b><br><code>gentoo</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/artix_linux.png" width="48" height="48">
-  <b>Artix</b><br><code>artix</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/adelie_linux.png" width="48" height="48">
-  <b>Adélie</b><br><code>adelie</code>&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/void_linux.png" width="48" height="43">
-  <b>Void</b><br><code>void</code>
-</div>
+# جدول الكلمات
+
+هذا هو جدول الكلمات:
+
+<table>
+  <tr>
+    <td style="width: 20%; text-align: center;">hello</td>
+    <td style="width: 20%; text-align: center;">world</td>
+    <td style="width: 20%; text-align: center;">code</td>
+    <td style="width: 20%; text-align: center;">test</td>
+    <td style="width: 20%; text-align: center;">apple</td>
+  </tr>
+  <tr>
+    <td style="width: 20%; text-align: center;">green</td>
+    <td style="width: 20%; text-align: center;">blue</td>
+    <td style="width: 20%; text-align: center;">red</td>
+    <td style="width: 20%; text-align: center;">yellow</td>
+    <td style="width: 20%; text-align: center;">pink</td>
+  </tr>
+  <tr>
+    <td style="width: 20%; text-align: center;">desk</td>
+    <td style="width: 20%; text-align: center;">chair</td>
+    <td style="width: 20%; text-align: center;">table</td>
+    <td style="width: 20%; text-align: center;">lamp</td>
+    <td style="width: 20%; text-align: center;">phone</td>
+  </tr>
+  <tr>
+    <td style="width: 20%; text-align: center;">book</td>
+    <td style="width: 20%; text-align: center;">pen</td>
+    <td style="width: 20%; text-align: center;">paper</td>
+    <td style="width: 20%; text-align: center;">note</td>
+    <td style="width: 20%; text-align: center;">pencil</td>
+  </tr>
+  <tr>
+    <td style="width: 20%; text-align: center;">music</td>
+    <td style="width: 20%; text-align: center;">dance</td>
+    <td style="width: 20%; text-align: center;">song</td>
+    <td style="width: 20%; text-align: center;">beat</td>
+    <td style="width: 20%; text-align: center;">rhythm</td>
+  </tr>
+</table>
