@@ -26,7 +26,10 @@ System paths mount automatically, and the environment supports GUI applications 
 ## Requirements
 
 ### Rooted Android Device
-Compatible with all root methods. Use a terminal app such as MiXplorer, MT Manager, Termux, TWRP, or ADB Shell.
+All root implementations are compatible.
+
+You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
+
 
 ### BusyBox for Android NDK
 Install the [latest BusyBox for Android NDK]() by [osm0sis]() Magisk module.  
