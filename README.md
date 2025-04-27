@@ -23,7 +23,19 @@
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
 
-You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
+## Requirements
+
+### Rooted Android Device
+Compatible with all root methods. Use a terminal app such as MiXplorer, MT Manager, Termux, TWRP, or ADB Shell.
+
+### BusyBox for Android NDK
+Install the [latest BusyBox for Android NDK]() by [osm0sis]() Magisk module.  
+- **Recommended:** v1.36.1 (stable)  
+- **Avoid:** v1.32.1 (known bugs)  
+- **Note:** Outdated versions may cause issues with rootfs downloads.
+
+### Alternative BusyBox
+BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-supported but may lead to bugs.
 
 ## Android Paths
 
