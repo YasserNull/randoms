@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
 </p>
 
-![](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chroot-distro.png) 
+![](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/chroot-distro.jpg) 
 
 ***chroot-distro***: Installs GNU/Linux distributions in a chroot environment on Android.  
 > The idea is inspired by [proot-distro](https://github.com/termux/proot-distro).
