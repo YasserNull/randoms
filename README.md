@@ -13,14 +13,14 @@
 + Directory Structure
 ```
 /data/local/chroot-distro/
-├── .backup/         # Backup folder for distributions
-├── .rootfs/         # Minimal root filesystem for bootstrapping distributions
-├── <distro>/        # Folder for installed distributions (e.g., ubuntu, debian)
-├── <distro>/        # Another distribution folder
-├── .config/         # Configuration folder for chroot setup
-│   ├── suid          # File to auto-fix SUID issue
-│   ├── ram_bind      # File for RAM disk setup to optimize performance     
-│   └── android_bind  # File to bind Android environment with chroot
+├── .backup/          # Backup folder for distributions
+├── .rootfs/          # Minimal root filesystem for bootstrapping distributions
+├── <distro>/         # Folder for installed distributions (e.g., ubuntu, debian)
+├── <distro>/         # Another distribution folder
+├── .config/          # Configuration folder for chroot setup
+│   ├── suid           # File to auto-fix SUID issue
+│   ├── ram_bind       # File for RAM disk setup to optimize performance     
+│   └── android_bind   # File to bind Android environment with chroot
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
 
