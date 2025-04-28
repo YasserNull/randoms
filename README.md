@@ -119,10 +119,11 @@ chroot-distro restore --default <distro>       # Restore to default settings
 
 ### Unmount Commands
 ```
-chroot-distro unmount <distro>                 # Unmount system points
-chroot-distro unmount --force --all <distro>   # Force unmount all mounts
+chroot-distro unmount <distro|all>                 # Unmount system points
+chroot-distro unmount --force --all <distro|all>   # Force unmount all mounts
 ```
 **Notes:**
+- You can unmount all distros with `unmount all`
 - Use `--force` to close processes accessing system points.
 - Use `--all` to unmount system, normal, and loopback mounts.
 
