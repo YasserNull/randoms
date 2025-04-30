@@ -117,6 +117,10 @@ chroot-distro restore --default <distro>       # Restore to default settings
 - Specify a custom `[path]` for backup/restore operations.
 - For older backups, use `--force` cautiously to avoid issues like system mount conflicts or storage limitations.
 
+### Mount 
+```
+chroot-distro mount <distro> # command to mount rootfs without entering
+```
 ### Unmount Commands
 ```
 chroot-distro unmount <distro|all>                 # Unmount system points
