@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/github/v/release/Magisk-Modules-Alt-Repo/chroot-distro?include_prereleases&label=Latest"/>
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
 </p>
-
+ت
 ![](https://github.com/YasserNull/test/blob/main/20250425_092417.jpg)
 
 ***chroot-distro***: Installs GNU/Linux distributions in a chroot environment on Android.  
@@ -61,3 +61,4 @@ As they say: ***With great power comes great responsibility.***
 Binding all Android root directories not mounted by default for full environment access. 
 
 ## Supported Distributions
+ا
