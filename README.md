@@ -15,8 +15,8 @@
 /data/local/chroot-distro/
 ├── .backup/           # Backup folder for distributions
 ├── .rootfs/           # Minimal root filesystem used for bootstrapping distributions
-├── <distro>/         # Folder for each installed distribution (e.g., ubuntu, debian)
-├── <distro>/         # Another folder for a different installed distribution
+├── <distro>/          # Folder for each installed distribution (e.g., ubuntu, debian)
+├── <distro>/          # Another folder for a different installed distribution
 ├── .config/           # Configuration folder for chroot-distro
 │   ├── <distro>       # Empty file representing a custom distribution
 │   ├── fix_suid       # File for handling SUID permission fixes
