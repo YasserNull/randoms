@@ -14,13 +14,13 @@
 ```
 /data/local/chroot-distro/
 ├── .backup/           # Backup folder for distributions
-├── .rootfs/           # Minimal root filesystem for bootstrapping distributions
-├── <distro>/          # Folder for installed distributions (e.g., ubuntu, debian)
-├── <distro>/          # Another distribution folder
-├── .config/           # Configuration folder for chroot setup
-│   ├── suid           # File to auto-fix SUID issue
-│   ├── ram_bind       # File for RAM disk setup to optimize performance     
-│   └── android_bind   # File to bind Android environment with chroot
+├── .rootfs/           # Minimal root filesystem used for bootstrapping distributions
+├── <distro>/          # Folder for an installed distribution (e.g., ubuntu, debian)
+├── .config/           # Configuration folder for chroot-distro
+│   ├── <distro>       # Empty file representing a custom distribution
+│   ├── fix_suid       # File for handling SUID permission fixes
+│   ├── ram_bind       # Configuration for RAM disk binding to improve performance
+│   └── android_bind   # Configuration for binding the Android environment with chroot
 ```
 System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
 
@@ -50,8 +50,6 @@ BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-s
 ├── /sys
 ├── /proc
 ├── /dev/pts
-├── /sdcard
-└── /storage
 ```
 
 ### Optional Mounts
@@ -88,13 +86,18 @@ As they say: ***With great power comes great responsibility.***
 
 ### Basic Commands
 ```
-chroot-distro help                 # Display all commands and usage
-chroot-distro env                  # Show environment details
+chroot-distro help                 # Display this help message
+chroot-distro env                  # Display environment information
 chroot-distro list                 # List available distributions
-chroot-distro download <distro>    # Download a distribution
-chroot-distro redownload <distro>  # Refresh an existing distribution
-chroot-distro delete <distro>      # Remove a distribution
+chroot-distro download <distro> [link]  # Download a distribution
+chroot-distro redownload <distro> [link]  # Redownload a distribution
+chroot-distro add <distro>  # Add a custom distribution
+chroot-distro rename <old> <new>  # Rename a distribution
+chroot-distro delete <distro>      # Delete a distribution (rootfs file only)
+chroot-distro remove <distro>      # Remove all files related to a distribution
 ```
+**Notes:**
+[link] is an optional parameter for downloading a custom distribution.
 
 ### Installation Commands
 ```
@@ -375,4 +378,3 @@ This software is licensed under the GNU General Public License v3.0 (GPL-3.0). Y
 - Use for commercial purposes
 
 Full license text: [GNU GPL v3](LICENSE)
-
