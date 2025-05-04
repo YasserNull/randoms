@@ -97,8 +97,8 @@ chroot-distro rename <old> <new>  # Rename a distribution
 chroot-distro delete <distro>      # Delete a distribution (rootfs file only)
 chroot-distro remove <distro>      # Remove all files related to a distribution
 ```
-**Notes:**
-[link] is an optional parameter for downloading a custom distribution.
+**Note:**
+- [link] is an optional parameter for downloading a custom distribution.
 
 ### Installation Commands
 ```
