@@ -162,7 +162,7 @@ chroot-distro backup ubuntu /sdcard/backup
 *Replace `<distro>` with the desired distribution identifier.*
 ### Settings Commands
 
-`chroot-distro android-bind <enable|disable>`bash
+```chroot-distro android-bind <enable|disable>```bash
 - Default set to enable.
 - Binds all Android root directories.
 
@@ -205,12 +205,12 @@ By default Android prevents suid usage under `/data` folder. This will prevent u
 1. fixsuid (automatic)  
 The fixsuid feature is enabled automatically. It attempts to remount /data with the correct suid and dev options, allowing sudo to work out of the box.  
 You can disable this feature and use another method.  
-```
+```bash
 chroot-distro fixsuid enable  # Activates automatic remounting.  
 chroot-distro fixsuid disable # Disables automatic remounting.
 ```
 2. Image File Method
-```
+```bash
 # Create image (adjust size as needed)
 su -c truncate -S 15G /data/local/distros.img
 su -c mke2fs -t ext4 /data/local/distros.img
