@@ -193,7 +193,8 @@ chroot-distro ram-bind <enable|disable>
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 ### chroot-distro on Gnu/Linux 
 ![Gnu_Linux](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gnu_linux.jpg) 
-**`chroot-distro` was originally designed for Android, but it has also been made compatible with GNU/Linux systems. 
+**`chroot-distro` was originally designed for Android, but it has also been made compatible with GNU/Linux systems.
+
 Installation instructions for GNU/Linux can be found here: [how-to.md](docs/how-to.md).**
 ## How-to Instructions
 **For detailed instructions on fixing `sudo` and other setup methods, see [how-to.md](docs/how-to.md).**
