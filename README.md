@@ -48,7 +48,7 @@ BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-s
 
 ### System Points
 ```
-/data/local/chroot-distro/<distro>
+<distro>/
 ├── /dev
 ├── /sys
 ├── /proc
