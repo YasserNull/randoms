@@ -196,7 +196,7 @@ chroot-distro ram-bind <enable|disable>
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## How-to Instructions
-**For detailed instructions on fixing `sudo` and other setup methods, see [docs/how-to.md](docs/how-to.md).**
+**For detailed instructions on fixing `sudo` and other setup methods, see [how-to.md](docs/how-to.md).**
 
 ## Development Guide
 **For full development instructions, see [development_guide.md](docs/development_guide.md).**
@@ -224,7 +224,7 @@ chroot-distro ram-bind <enable|disable>
   ```bash
   export chroot-distro_log=<value>
   ```
-  Reserved for developers, explained in [development_guide.md](docs/development_guide.md). 
+  **Reserved for developers, explained in [development_guide.md](docs/development_guide.md).**
 
 ## Semantic Versioning
 
