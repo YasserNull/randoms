@@ -206,12 +206,12 @@ chroot-distro ram-bind <enable|disable>
 
 By default Android prevents suid usage under `/data` folder. This will prevent using `sudo` inside the rootfs. There is a few alternatives how this can be solved:
 
-1. fixsuid (automatic)  
-The fixsuid feature is enabled automatically. It attempts to remount /data with the correct suid and dev options, allowing sudo to work out of the box.  
+1. fix-suid (automatic)  
+The fix-suid feature is enabled automatically. It attempts to remount /data with the correct suid and dev options, allowing sudo to work out of the box.  
 You can disable this feature and use another method.  
 ```bash
-chroot-distro fixsuid enable  # Activates automatic remounting.  
-chroot-distro fixsuid disable # Disables automatic remounting.
+chroot-distro fix-suid enable  # Activates automatic remounting.  
+chroot-distro fix-suid disable # Disables automatic remounting.
 ```
 2. Image File Method
 ```bash
@@ -266,7 +266,7 @@ Overall Note:
   ```bash
   export chroot-distro_log=<value>
   ```
-  Reserved for developers, explained in [](). 
+  Reserved for developers, explained in [development.md](). 
 
 ## Semantic Versioning
 
