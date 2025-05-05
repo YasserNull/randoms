@@ -14,8 +14,8 @@ Before you begin, ensure you have the following:
 ### 1. Install a VNC Viewer App
 To view the desktop, install a VNC viewer app on your Android device. Here are some recommended options:
 - [RealVNC Viewer](https://play.google.com/store/apps/details?id=com.realvnc.viewer.android)
-- [bVNC Pro](https://play.google.com/store/apps/details?id=com.iiordanov.remote.VNC)
-- [MultiVNC](https://f-droid.org/packages/app.muhasa.underdog.multivnc/)
+- [bVNC Pro]()
+- [MultiVNC]()
 
 ### 2. Install Required Packages
 In your chroot environment (e.g., Debian or Ubuntu), open a terminal and run these commands:
