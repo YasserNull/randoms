@@ -196,10 +196,9 @@ chroot-distro ram-bind <enable|disable>
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## How-to Instructions
-For detailed instructions on fixing `sudo` and other setup methods, see [docs/how-to.md](docs/how-to.md).
+**For detailed instructions on fixing `sudo` and other setup methods, see [docs/how-to.md](docs/how-to.md).**
 
 ## Development Guide
-
 **For full development instructions, see [development_guide.md](docs/development_guide.md).**
 
 ## Environment Variables for chroot-distro Configuration
