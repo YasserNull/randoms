@@ -194,6 +194,7 @@ chroot-distro ram-bind <enable|disable>
 ### chroot-distro on Gnu/Linux 
 ![Gnu_Linux](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gnu_linux.jpg) 
 **`chroot-distro` was originally designed for Android, but it has also been made compatible with GNU/Linux systems.**
+
 **Installation instructions for GNU/Linux can be found here: [how-to.md](docs/how-to.md).**
 ## How-to Instructions
 **For detailed instructions on fixing `sudo` and other setup methods, see [how-to.md](docs/how-to.md).**
