@@ -226,150 +226,21 @@ Overall Note:
   - Note: You can't use it for Android stuff (at least by default)
 ---
 
+## Gui
 ### Desktop Environment with VNC
 
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
 ![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
 
-1. Install VNC app  
-Download and install any VNC viewer app.
-  * RealVNC Viewer
-  * bVNC Pro
-  * MultiVNC
-
-2. Install Required Packages  
-(Assuming you have already installed `chroot-distro` and set up it's chroot environment)  
-Inside your chroot environment:
-```
-apt update
-apt upgrade
-apt install tightvncserver
-apt install nano dbus-x11 xfce4 xfce4-goodies xfce4-terminal
-```
-
-3. Set Up Desktop Environment
-```
-# Configure Terminal
-update-alternatives --config x-terminal-emulator
-
-# Start VNC first time to create config
-vncserver
-
-# Stop the server
-vncserver -kill :1
-
-# Add XFCE to startup
-echo 'startxfce4 &' >> ~/.vnc/xstartup
-```
-
-4. Launch Desktop Environment
-```
-# Start VNC
-vncserver
-
-# Stop VNC
-vncserver -kill :1
-```
----
-
 ### Desktop Environment with Termux-X11
-1. Install Termux-X11  
-Download and install Termux-X11 from the official repository:
-  https://github.com/termux/termux-x11
 
-2. Install Required Packages in Termux
-First, open Termux and run these commands:
-```
-pkg install x11-repo
-pkg install root-repo
-pkg install tsu
-pkg install ncurses-utils
-pkg install termux-x11-nightly
-pkg install pulseaudio
-pkg install virglrenderer-android
-```
+![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
 
-3. Set Up Desktop Environment  
-(Assuming you have already installed chroot-distro and set up it's chroot environment)  
-Inside your chroot environment, Install XFCE4:
-```
-apt install dbus-x11 xfce4 xfce4-goodies xfce4-terminal
-
-# Optional: Make sure to set up mpd.conf for music/audio server before running 'Audio Server'.
-apt install mpd
-```
-
-4. Launch the Desktop Environment Easily
-![chroot-xfce.sh](https://github.com/user-attachments/assets/3f5db05f-fdde-40da-aab1-bb754ca98e35)
-Note: Make sure to run the script in Termux.
-
-Save this script as "chroot-xfce.sh" as it provides user-friendly menu and use it to launch your XFCE4 desktop environment later:
-1. Download the provided code:  
-[scripts/chroot-xfce.sh](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/tree/main/scripts/chroot-xfce.sh)
-
-2. Make it executable:
-```
-chmod +x chroot-xfce.sh
-```
-
-3. Run the script:
-```
-./chroot-xfce.sh
-or
-bash chroot-xfce.sh
-```
-
-Once completed, you'll have a fully functional XFCE4 desktop environment with audio capabilities running through Termux-X11.
+**For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## Development Guide
 
-If you want to help with development or test a bug report against the latest version, create a development build using:
-
-```
-zip chroot-distro.zip config.sh module.prop META-INF/com/google/android/* system/bin/chroot-distro
-```
-
-Alternative approaches:
-- Enable SSH in a distro, update scripts remotely, and test against another distro (no reboot needed thus making the development quicker)
-- Develop directly on the device (physically or via remote connection)
-
-Testing requirements:
-- Test all changes in Termux (or other terminals) AND Android terminal emulator (ADB Shell)
-- Note: ADB Shell only has Busybox and Android Toybox commands, which may behave differently than Termux
-
-Code quality:
-- Use `ShellCheck` for POSIX compliance
-- Document warning exceptions with `# shellcheck disable=SCXXXX` and explanatory comments
-- For shell scripting guidance, refer to [Grymoire's tutorial](https://www.grymoire.com/Unix/Sh.html)
-
-**Error Detection:**
-
-To control command monitoring and error handling, set the `chroot_distro_log` variable:
-```
-export chroot_distro_log=<value>
-```
-- `0`: Checks syntax without executing commands.
-- `1`: Stops on any error.
-- `2`: Stops on error and shows executed commands.
-
-Check rootfs urls: 
-
-1. Download the provided code:  
-[scripts/check_rootfs_urls.sh](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/tree/main/scripts/check_rootfs_urls.sh)
-
-2. Make it executable:
-```
-chmod +x check_rootfs_urls.sh
-```
-
-3. Run the script:
-```
-./check_rootfs_urls.sh
-or
-bash check_rootfs_urls.sh
-```
-
-If you see a red link, report it in the [issues](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/issues) section.
+**For full development instructions, see [development_guide.md](docs/development_guide.md).**
 
 ## Semantic Versioning
 
@@ -387,4 +258,3 @@ This software is licensed under the GNU General Public License v3.0 (GPL-3.0). Y
 - Use for commercial purposes
 
 Full license text: [GNU GPL v3](LICENSE)
-[example](example.md) 
