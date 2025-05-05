@@ -73,12 +73,12 @@ Download and install Termux-X11 from the [official repository](https://github.co
 ### 2. Install Required Packages in Termux
 Open the Termux app and run these commands:
 ```
-pkg install x11-repo       # Adds the X11 package repository
-pkg install root-repo      # Adds the root package repository
-pkg install tsu            # Installs a tool for root access
-pkg install ncurses-utils  # Installs utilities for terminal interfaces
-pkg install termux-x11-nightly  # Installs the Termux-X11 package
-pkg install pulseaudio     # Installs the audio server
+pkg install x11-repo               # Adds the X11 package repository
+pkg install root-repo              # Adds the root package repository
+pkg install tsu                    # Installs a tool for root access
+pkg install ncurses-utils          # Installs utilities for terminal interfaces
+pkg install termux-x11-nightly     # Installs the Termux-X11 package
+pkg install pulseaudio             # Installs the audio server
 pkg install virglrenderer-android  # Enables graphics acceleration
 ```
 
