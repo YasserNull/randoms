@@ -21,7 +21,7 @@
 │   ├── <distro>       # Empty file representing a custom distribution
 │   ├── fix_suid       # File for handling SUID permission fixes
 │   ├── ram_bind       # Configuration for RAM disk binding to improve performance
-└─── android_bind   # Configuration for binding the Android environment with chroot
+│   ├── android_bind   # Configuration for binding the Android environment with chroot
 ```
 If the system is not *Android*, the main path is `/opt/chroot-distro`
 
