@@ -186,8 +186,7 @@ chroot-distro ram-bind <enable|disable>
 
 ## Screenshot Examples 
 ![Debian  console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian.png)
-![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png)
-### Desktop Environment with VNC
+![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png) ### Desktop Environment with VNC
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
 ![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
 ### Desktop Environment with Termux-X11
