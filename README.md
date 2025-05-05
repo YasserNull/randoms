@@ -168,12 +168,12 @@ chroot-distro android-bind <enable|disable>
 - Default set to enable.
 - Binds all Android root directories.
 ```bash
-chroot-distro fixsuid <enable|disable>
+chroot-distro fix-suid <enable|disable>
 ```
 - Default set to enable.
 - Auto-fixes the setuid issue.
 ```bash
-chroot-distro ram <enable|disable>
+chroot-distro ram-bind <enable|disable>
 ```
 - Default set to enable.
 - Binds some paths in the distro to RAM for performance improvement.
