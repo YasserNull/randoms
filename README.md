@@ -239,6 +239,31 @@ Overall Note:
 
 **For full development instructions, see [development_guide.md](docs/development_guide.md).**
 
+## Environment Variables for chroot-distro Configuration
+- **Manual specification for busybox**:
+  ```bash
+  export chroot-distro_busybox=/system/bin/busybox
+  ```
+  Used to manually specify the path to the busybox command.
+
+- **Skip exit on errors (unsafe)**:
+  ```bash
+  chroot-distro_exit=true
+  ```
+  Allows bypassing automatic exit on errors.
+
+- **Disable mounting**:
+  ```bash
+  chroot-distro_mount=true
+  ```
+  Prevents mounting of file systems during execution.
+
+- **Developer-specific setting**:
+  ```bash
+  export chroot-distro_log=<value>
+  ```
+  Reserved for developers, explained in [](). 
+
 ## Semantic Versioning
 
 `chroot-distro` uses semantic versioning for version numbers. Versioning uses three levels: major, minor and patch. Major version changes when there are breaking changes in API. Minor version changes for new features (or significant changes that don't break compatibility). Patch version is only for bug fixes or very small changes (no breaking changes).
