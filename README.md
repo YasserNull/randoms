@@ -52,7 +52,7 @@ BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-s
 ├── /dev
 ├── /sys
 ├── /proc
-├── /dev/pts
+└── /dev/pts
 ```
 
 ### Optional Mounts
