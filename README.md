@@ -108,7 +108,7 @@ chroot-distro remove <distro>             # Remove all files related to a distri
 - [link] is an optional parameter for downloading a custom distribution.
 
 ### Installation Commands
-```
+```bash
 chroot-distro install <distro>              # Install a distribution
 chroot-distro reinstall <distro>            # Reinstall a distribution
 chroot-distro reinstall --force <distro>    # Force reinstall
@@ -117,7 +117,7 @@ chroot-distro uninstall --force <distro>    # Force uninstall
 ```
 
 ### Backup and Restore
-```
+```bash
 chroot-distro backup <distro> [path]           # Create a backup
 chroot-distro unbackup <distro>                # Remove a backup
 chroot-distro restore <distro> [path]          # Restore from a backup
@@ -129,11 +129,11 @@ chroot-distro restore --default <distro>       # Restore to default settings
 - For older backups, use `--force` cautiously to avoid issues like system mount conflicts or storage limitations.
 
 ### Mount 
-```
+```bash
 chroot-distro mount <distro> # command to mount rootfs without entering
 ```
 ### Unmount Commands
-```
+```bash
 chroot-distro unmount <distro|all>                 # Unmount system points
 chroot-distro unmount --force --all <distro|all>   # Force unmount all mounts
 ```
@@ -143,7 +143,7 @@ chroot-distro unmount --force --all <distro|all>   # Force unmount all mounts
 - Use `--all` to unmount system, normal, and loopback mounts.
 
 ### Execute Commands
-```
+```bash
 chroot-distro command <distro> "command"       # Run a command in the distribution
 chroot-distro login <distro>                   # Log in to the distribution
 ```
@@ -152,7 +152,7 @@ chroot-distro login <distro>                   # Log in to the distribution
 - The `command` operation executes and returns to the host system.
 
 ### Example Usage
-```
+```bash
 chroot-distro download ubuntu
 chroot-distro install ubuntu
 chroot-distro login ubuntu
@@ -162,7 +162,7 @@ chroot-distro backup ubuntu /sdcard/backup
 *Replace `<distro>` with the desired distribution identifier.*
 ### Settings Commands
 
-`chroot-distro android-bind <enable|disable>`
+`chroot-distro android-bind <enable|disable>`bash
 - Default set to enable.
 - Binds all Android root directories.
 
