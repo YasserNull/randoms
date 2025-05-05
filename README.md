@@ -21,7 +21,7 @@
 │   ├── <distro>       # Empty file representing a custom distribution
 │   ├── fix_suid       # File for handling SUID permission fixes
 │   ├── ram_bind       # Configuration for RAM disk binding to improve performance
-└──── android_bind   # Configuration for binding the Android environment with chroot
+└─── android_bind   # Configuration for binding the Android environment with chroot
 ```
 If the system is not *Android*, the main path is `/opt/chroot-distro`
 
@@ -33,7 +33,6 @@ System paths mount automatically, and the environment supports GUI applications 
 All root implementations are compatible.
 
 You can use `chroot-distro` on any terminal, for example: MiXplorer, MT Manager, Termux, TWRP and Android Terminal Emulator (ADB Shell).
-
 
 ### BusyBox for Android NDK
 Install the [latest BusyBox for Android NDK]() by [osm0sis]() Magisk module.  
@@ -182,22 +181,18 @@ chroot-distro ram-bind <enable|disable>
 1. Download the [latest release](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest) from the table below.
 2. Install via a module manager (e.g., Magisk) or flash through a custom recovery.
 
-| Version | v1.3.0 | v1.4.0 | v1.5.0 | Latest |
+| Version | v1.3.0 | v1.4.0 | v2.0.0 | Latest |
 |---------|--------|--------|--------|--------|
-| Release | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.5.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
+| Release | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v2.0.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
 
 ## Screenshot Examples 
 ![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png)  
 ![Debian  console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian.png)
-
 ### Desktop Environment with VNC
-
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png) 
 ![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
-
 ### Desktop Environment with Termux-X11 
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
-
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## TODO: How-to Instructions
@@ -206,14 +201,14 @@ chroot-distro ram-bind <enable|disable>
 
 By default Android prevents suid usage under `/data` folder. This will prevent using `sudo` inside the rootfs. There is a few alternatives how this can be solved:
 
-1. fix-suid (automatic)  
+"*1. fix-suid (automatic)**
 The fix-suid feature is enabled automatically. It attempts to remount /data with the correct suid and dev options, allowing sudo to work out of the box.  
 You can disable this feature and use another method.  
 ```bash
 chroot-distro fix-suid enable  # Activates automatic remounting.  
 chroot-distro fix-suid disable # Disables automatic remounting.
 ```
-2. Image File Method
+**2. Image File Method**
 ```bash
 # Create image (adjust size as needed)
 su -c truncate -S 15G /data/local/distros.img
@@ -223,14 +218,14 @@ su -c mke2fs -t ext4 /data/local/distros.img
 su -c mount /data/local/distros.img /data/local/chroot-distro
 ```
 
-3. SD Card Method  
+**3. SD Card Method**
 https://xdaforums.com/t/mount-ext4-formatted-sd-card.3769344/
 ```
 1. Format SD card with ext4
 2. Mount to `/data/local/chroot-distro`
 3. Remount after each reboot
 ```
-Overall Note:
+**Overall Note:**
 - Methods 2 & 3 are safer (prevent accidental command execution)
 - SD Card Method advantages:
   - Saves internal storage space
