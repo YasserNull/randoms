@@ -190,7 +190,7 @@ chroot-distro ram-bind <enable|disable>
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
 ![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
 ### Desktop Environment with Termux-X11
-![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
+![Gui over Termux-X11]()
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## How-to Instructions
