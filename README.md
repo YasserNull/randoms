@@ -94,15 +94,15 @@ As they say: ***With great power comes great responsibility.***
 
 ### Basic Commands
 ```
-chroot-distro help                 # Display this help message
-chroot-distro env                  # Display environment information
-chroot-distro list                 # List available distributions
-chroot-distro download <distro> [link]  # Download a distribution
+chroot-distro help                        # Display this help message
+chroot-distro env                         # Display environment information
+chroot-distro list                        # List available distributions
+chroot-distro download <distro> [link]    # Download a distribution
 chroot-distro redownload <distro> [link]  # Redownload a distribution
-chroot-distro add <distro>  # Add a custom distribution
-chroot-distro rename <old> <new>  # Rename a distribution
-chroot-distro delete <distro>      # Delete a distribution (rootfs file only)
-chroot-distro remove <distro>      # Remove all files related to a distribution
+chroot-distro add <distro>                # Add a custom distribution
+chroot-distro rename <old> <new>          # Rename a distribution
+chroot-distro delete <distro>             # Delete a distribution (rootfs file only)
+chroot-distro remove <distro>             # Remove all files related to a distribution
 ```
 **Note:**
 - [link] is an optional parameter for downloading a custom distribution.
