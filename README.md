@@ -39,7 +39,8 @@ Install the [latest BusyBox for Android NDK]() by [osm0sis]() Magisk module.
 - **Note:** Outdated versions may cause issues with rootfs downloads.
 
 ### Alternative BusyBox
-BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-supported but may lead to bugs.
+- BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-supported but may lead to bugs.
+- Additionally, BusyBox that is automatically detected is also supported, such as the one provided by **Termux** or the user's environment.
 
 ## Distro Paths
 
