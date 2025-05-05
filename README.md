@@ -25,8 +25,6 @@
 ```
 If the system is not *Android*, the main path is `/opt/chroot-distro`
 
-System paths mount automatically, and the environment supports GUI applications through VNC or X11 forwarding.
-
 ## Requirements
 
 ### Rooted Android Device
