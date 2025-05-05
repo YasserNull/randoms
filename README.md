@@ -266,7 +266,7 @@ Overall Note:
   ```bash
   export chroot-distro_log=<value>
   ```
-  Reserved for developers, explained in [development.md](). 
+  Reserved for developers, explained in [development.md](docs/development.md). 
 
 ## Semantic Versioning
 
