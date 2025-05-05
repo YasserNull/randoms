@@ -191,7 +191,8 @@ chroot-distro ram-bind <enable|disable>
 ### Desktop Environment with Termux-X11
 ![Gui over Termux-X11]()
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
-
+### chroot-distro on Gnu/Linux 
+![Gnu_Linux](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/images/gnu_linux.jpg) 
 ## How-to Instructions
 **For detailed instructions on fixing `sudo` and other setup methods, see [how-to.md](docs/how-to.md).**
 
