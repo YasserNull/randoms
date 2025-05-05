@@ -44,7 +44,7 @@ Install the [latest BusyBox for Android NDK]() by [osm0sis]() Magisk module.
 ### Alternative BusyBox
 BusyBox from Magisk, KernelSU, or APatch (without the NDK module) is community-supported but may lead to bugs.
 
-## Android Paths
+## Distro Paths
 
 ### System Points
 ```
