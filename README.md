@@ -182,22 +182,16 @@ chroot-distro backup ubuntu /sdcard/backup
 |---------|--------|--------|--------|--------|
 | Release | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.3.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.4.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/download/v1.5.0/chroot-distro.zip) | [Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
 
-## Screenshot Examples
-Kali Linux 
-![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png) 
-Debian 
+## Screenshot Examples 
+![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png)  
 ![Debian  console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian.png)
 
-## Gui
 ### Desktop Environment with VNC
 
-Debian
-![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
-Ubuntu 
+![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png) 
 ![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
 
-### Desktop Environment with Termux-X11
-Ubuntu 
+### Desktop Environment with Termux-X11 
 ![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
 
 **For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
