@@ -199,9 +199,13 @@ chroot-distro ram-bind <enable|disable>
 **For full development instructions, see [development_guide.md](docs/development_guide.md).**
 
 ## Environment Variables for chroot-distro Configuration
-- **Manual specification for busybox**:
+- **Change default `chroot-distro` path**: 
   ```bash
-  export chroot_distro_busybox=/system/bin/busybox
+  export chroot_distro_path=<path>
+  ```
+- **Manual specification for `busybox`**:
+  ```bash
+  export chroot_distro_busybox=<path> 
   ```
   Used to manually specify the path to the busybox command.
 
