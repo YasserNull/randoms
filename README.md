@@ -342,14 +342,15 @@ Code quality:
 - Document warning exceptions with `# shellcheck disable=SCXXXX` and explanatory comments
 - For shell scripting guidance, refer to [Grymoire's tutorial](https://www.grymoire.com/Unix/Sh.html)
 
-Error Detection: 
+**Error Detection:**
 
-To enable command monitoring and stop on errors, use:
+To control command monitoring and error handling, set the `chroot_distro_log` variable:
 ```
-export chroot_distro_log=""
+export chroot_distro_log=<value>
 ```
-- Displays executed commands.
-- Stops immediately on error with line number.
+- `0`: Checks syntax without executing commands.
+- `1`: Stops on any error.
+- `2`: Stops on error and shows executed commands.
 
 Check rootfs urls: 
 
