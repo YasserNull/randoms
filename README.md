@@ -187,6 +187,21 @@ Kali Linux
 ![Kali Linux console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/kali-linux.png) 
 Debian 
 ![Debian  console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian.png)
+
+## Gui
+### Desktop Environment with VNC
+
+Debian
+![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
+Ubuntu 
+![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
+
+### Desktop Environment with Termux-X11
+Ubuntu 
+![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
+
+**For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
+
 ## TODO: How-to Instructions
 
 ### Fixing Sudo
@@ -225,18 +240,6 @@ Overall Note:
   - Extends device lifespan
   - Note: You can't use it for Android stuff (at least by default)
 ---
-
-## Gui
-### Desktop Environment with VNC
-
-![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
-![Ubuntu GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/ubuntu.png)
-
-### Desktop Environment with Termux-X11
-
-![Debian GUI over VNC](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian_vnc.png)
-
-**For a complete setup guide of VNC and Termux-X11, see [android_gui.md](docs/android_gui.md).**
 
 ## Development Guide
 
