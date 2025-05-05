@@ -93,7 +93,7 @@ As they say: ***With great power comes great responsibility.***
 ## Commands
 
 ### Basic Commands
-```
+```bash
 chroot-distro help                        # Display this help message
 chroot-distro env                         # Display environment information
 chroot-distro list                        # List available distributions
@@ -248,13 +248,13 @@ Overall Note:
 
 - **Skip exit on errors (unsafe)**:
   ```bash
-  chroot-distro_exit=true
+  export chroot-distro_exit=true
   ```
   Allows bypassing automatic exit on errors.
 
 - **Disable mounting**:
   ```bash
-  chroot-distro_mount=true
+  export chroot-distro_mount=true
   ```
   Prevents mounting of file systems during execution.
 
