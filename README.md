@@ -180,10 +180,6 @@ chroot-distro ram-bind <enable|disable>
 1. Download the [latest release](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest) from the table below.
 2. Install via a module manager (e.g., Magisk) or flash through a custom recovery.
 
-| Latest |
-|--------|
-|[Download](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/releases/latest/download/chroot-distro.zip) |
-
 ## Screenshot Examples 
 ![Debian  console](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro/raw/main/screenshot/debian.png)
 ### Desktop Environment with VNC
