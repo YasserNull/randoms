@@ -94,6 +94,7 @@ As they say: ***With great power comes great responsibility.***
 chroot-distro help                        # Display this help message
 chroot-distro env                         # Display environment information
 chroot-distro list                        # List available distributions
+chroot-distro list -i|--installed         # List installed distributions 
 chroot-distro download <distro> [link]    # Download a distribution
 chroot-distro redownload <distro> [link]  # Redownload a distribution
 chroot-distro add <distro>                # Add a custom distribution
