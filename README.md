@@ -245,9 +245,3 @@ This software is licensed under the GNU General Public License v3.0 (GPL-3.0). Y
 - Use for commercial purposes
 
 Full license text: [GNU GPL v3](LICENSE)
-
-## Support and Thanks
-
-If you wish to support me: [Binance USDT Donation Link](#) *(Add your donation link here)*
-
-A huge thank you to all the contributors who helped improve this project! Your support and contributions are greatly appreciated.
