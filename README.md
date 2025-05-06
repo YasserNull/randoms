@@ -211,19 +211,21 @@ chroot-distro ram-bind <enable|disable>
   export chroot_distro_busybox=<path> 
   ```
   Used to manually specify the path to the busybox command.
-
+- ** tmpfs mount for `/tmp`**: 
+  ```bash
+  export chroot_distro_tmp=true
+  ```
+  Useful in some cases.
 - **Skip exit on errors (unsafe)**:
   ```bash
   export chroot_distro_exit=true
   ```
   Allows bypassing automatic exit on errors.
-
 - **Disable mounting**:
   ```bash
   export chroot_distro_mount=true
   ```
   Prevents mounting of file systems during execution.
-
 - **Developer-specific setting**:
   ```bash
   export chroot_distro_log=<value>
