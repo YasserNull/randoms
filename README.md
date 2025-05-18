@@ -1,1 +1,1 @@
-![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https://github.com/YasserNull&count_bg=%2379C83D&title_bg=%23555555&icon=github.svg&icon_color=%23E7E7E7&title=Profile%20Views&edge_flat=false)
+[![Yasser Null profile views](https://u8views.com/api/v1/github/profiles/162287858/views/day-week-month-total-count.svg)](https://u8views.com/github/YasserNull)
