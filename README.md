@@ -1,1 +1,1 @@
-[![Yasser Null profile views](https://u8views.com/api/v1/github/profiles/162287858/views/day-week-month-total-count.svg)](https://u8views.com/github/YasserNull)
+[![Yasser Null profile views](https://u8views.com/api/v1/github/profiles/162287858/views/total-count.svg)](https://u8views.com/github/YasserNull)
