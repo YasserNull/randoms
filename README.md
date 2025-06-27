@@ -66,7 +66,7 @@ You can contribute to SetBox in the following ways:
 
 - Share feedback and suggestions to improve the app.
 - Help translate SetBox into your language.
-- Create new modules and share them via the community repository: [`setbox-repo`](#).
+- Create new modules and share them via the community repository: [`setbox-repo`](https://github.com/YasserNull/setbox-repo).
 
 ---
 
