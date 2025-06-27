@@ -16,10 +16,9 @@
 
 SetBox offers a wide range of features, including:
 
-- **Quick Settings Customization**: Modify system settings with ease.
-- **Unlock Hidden Features**: Enable hidden Android functionalities.
-- **System Fixes**: Resolve common system issues.
-- **And More**: Explore a variety of additional tools and tweaks.
+- Control settings quickly
+- Enable and disable hidden features
+- Useful tweaks and some system fixes
 
 SetBox thrives on community contributions, enabling anyone to create and share their own modules to enhance the app's capabilities.
 
