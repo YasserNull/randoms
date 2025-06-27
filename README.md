@@ -1,4 +1,4 @@
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=YasserNull.shappky)
+[![Downloads](https://badgen.net/visitor-badge/badge.svg?page_id=YasserYvY.show-touches.module.prop)](https://raw.githubusercontent.com/YasserYvY/show-touches/main/module.prop)
 # chroot-distro
 <p align="center">
   <img src="https://img.shields.io/github/downloads/Magisk-Modules-Alt-Repo/chroot-distro/total?label=Downloads"/>
