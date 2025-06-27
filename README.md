@@ -1,3 +1,4 @@
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=YasserNull.shappky)
 # chroot-distro
 <p align="center">
   <img src="https://img.shields.io/github/downloads/Magisk-Modules-Alt-Repo/chroot-distro/total?label=Downloads"/>
