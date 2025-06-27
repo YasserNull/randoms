@@ -27,7 +27,7 @@ SetBox thrives on community contributions, enabling anyone to create and share t
 
 ## Activating SetBox
 
-To use SetBox, you must install the **SetBox Plugin**. You can activate the app using one of the following methods:
+The **SetBox** application requires a one-time activation using one of the following methods:
 
 - **Root Access**: Requires a rooted device.
 - **Shizuku**: Use the Shizuku app for non-root activation.
