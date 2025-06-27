@@ -72,7 +72,7 @@ You can contribute to SetBox in the following ways:
 
 ## License
 
-SetBox is an open-source project licensed under **GPL v3**.
+SetBox is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ---
 
