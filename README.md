@@ -79,4 +79,4 @@ SetBox is licensed under the [GNU General Public License v3.0](LICENSE).
 
 To help keep SetBox alive, consider donating via:
 
-[**PayPal**:](https://www.paypal.com/ncp/payment/7X44EWSM9KAVW)
+[**PayPal**](https://www.paypal.com/ncp/payment/7X44EWSM9KAVW)
