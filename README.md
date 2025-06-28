@@ -53,9 +53,9 @@ adb pm grant com.yn.setbox.plugin android.permission.WRITE_SECURE_SETTINGS
 
 ---
 
-## Downloads
+Downloads
 
-Download [SetBox]() and the [SetBox Plugin]() from the [Releases](#) page.
+Download **SetBox** and the **SetBox Plugin** from the [Releases](https://github.com/YasserNull/setbox/releases) page.
 
 ---
 
