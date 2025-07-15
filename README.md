@@ -1,1 +1,1 @@
-<img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Gnu-logo.svg" alt="GNU Logo" width="100"/>
+<img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Official_gnu.svg" alt="GNU Head Logo" width="100"/>
