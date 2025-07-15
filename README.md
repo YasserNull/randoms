@@ -21,8 +21,7 @@ I make very random stuff like:
 - [Server Form Overlay](https://github.com/yasserXd99/Server_Form_Ui) — an actual innovation in Minecraft addon development  
   
 ## Projects I Enjoyed Working On
-- chroot-distro    
-- physics-addon  
+- [chroot-distro](https://github.com/Magisk-Modules-Alt-Repo/chroot-distro) 
   
 I hope to keep learning and make even better stuff in the future =).  
   
