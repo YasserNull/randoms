@@ -1,0 +1,31 @@
+name: Publish Boot.img to Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  extract-boot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download ROM TGZ
+        run: |
+          wget -O rom.tgz "https://bigota.d.miui.com/V12.5.6.0.RCDMIXM/dandelion_global_images_V12.5.6.0.RCDMIXM_20220727.0000.00_11.0_global_cbcd1b0996.tgz"
+
+      - name: Extract boot.img
+        run: |
+          mkdir extracted
+          tar -xzf rom.tgz -C extracted
+          # افترض أن boot.img موجود في مسار known داخل extracted
+          cp extracted/images/boot.img ./boot.img
+
+      - name: Upload boot.img to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: boot.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
