@@ -1,8 +1,8 @@
 name: Publish Boot.img to Release
 
+# جعل Workflow يدوي عبر زر Run workflow
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   extract-boot:
@@ -20,7 +20,6 @@ jobs:
         run: |
           mkdir extracted
           tar -xzf rom.tgz -C extracted
-          # افترض أن boot.img موجود في مسار known داخل extracted
           cp extracted/images/boot.img ./boot.img
 
       - name: Upload boot.img to Release
