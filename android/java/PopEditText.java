@@ -1,4 +1,3 @@
-// قيد التطوير..
 package com.yn.tests.popedittext;
 
 import android.animation.ValueAnimator;
@@ -189,7 +188,8 @@ public class PopEditText extends View {
     private ValueAnimator rotationAnimator;
 
     // index
-    private final List<Long> lineOffsets = new ArrayList<>();
+    private final Object lineOffsetsLock = new Object();
+    private long[] lineOffsets = new long[0];
     private volatile boolean isIndexReady = false;
     private volatile boolean isIndexBuilding = false;
 
@@ -525,7 +525,7 @@ public class PopEditText extends View {
         if (showLineNumbers) {
             int maxLines = 0;
             if (isIndexReady) {
-                maxLines = lineOffsets.size();
+                maxLines = lineOffsets.length;
             } else if (isEof) {
                 maxLines = windowStartLine + linesWindow.size();
             } else {
@@ -821,29 +821,48 @@ public class PopEditText extends View {
         float totalWidth = (btnWidth * btnCount) + (btnSpacing * (btnCount - 1)) + (popupPadding * 2);
         float totalHeight = btnHeight + (popupPadding * 2);
 
-        float left, top;
-
-        // FIX 1: Anchor the popup to the END of the selection, not the start.
-        // This makes it follow the active handle and ensures it's visible after "Select All".
+        // Calculate the anchor point for the popup relative to the view.
+        // This should be the position of the selection handle.
         String ln = getLineTextForRender(selEndLine);
         float selX = paint.measureText(ln, 0, Math.max(0, Math.min(selEndChar, ln.length())));
-        float selY = (selEndLine * lineHeight);
-        float viewX = paddingLeft + selX - scrollX;
-        float viewY = selY - scrollY;
+        
+        // Handle X position: center of the handle is at getTextStartX() + selX - scrollX
+        float handleCenterX = getTextStartX() + selX - scrollX;
+        
+        // Handle Y position: The handle teardrop starts at selEndLine * lineHeight + lineHeight (bottom of line)
+        // and extends downwards by handleRadius * 2. So the bottom of the handle is:
+        float handleBottomY = selEndLine * lineHeight - scrollY + lineHeight + handleRadius * 2;
 
-        left = viewX - totalWidth / 2;
-        top = viewY - totalHeight - lineHeight; // Default position: above the handle.
+        float proposedLeft = handleCenterX - totalWidth / 2f;
 
-        if (left < 0) left = 0;
-        if (left + totalWidth > getWidth()) left = getWidth() - totalWidth;
+        // Clamp horizontal position to screen bounds
+        if (proposedLeft < 0) proposedLeft = 0;
+        if (proposedLeft + totalWidth > getWidth()) proposedLeft = getWidth() - totalWidth;
 
-        // FIX 2: If the popup must be drawn below the text (at top of screen),
-        // add enough padding to avoid obscuring the selection handle.
-        if (top < 0) {
-            top = viewY + lineHeight + (handleRadius * 2.2f);
+        // Calculate vertical positions:
+        // 1. Above the handle
+        float topAboveHandle = handleBottomY - totalHeight - (lineHeight * 0.5f); // Half a line height padding
+        // 2. Below the handle
+        float topBelowHandle = handleBottomY + (lineHeight * 0.5f); // Half a line height padding
+
+        float finalTop;
+        // The effective bottom boundary for the popup (top of keyboard or bottom of view)
+        float visibleBottomBound = getHeight() - keyboardHeight;
+
+        // Attempt to place above handle first
+        if (topAboveHandle >= 0 && (topAboveHandle + totalHeight <= visibleBottomBound)) {
+            finalTop = topAboveHandle;
+        } else if (topBelowHandle + totalHeight <= visibleBottomBound) {
+            // Doesn't fit above, try below (if it fits above keyboard)
+            finalTop = topBelowHandle;
+        } else {
+            // Neither above nor below the handle fits entirely within the visible area above the keyboard.
+            // As a last resort, place it as high as possible without going into the keyboard area.
+            finalTop = visibleBottomBound - totalHeight - popupPadding;
+            if (finalTop < 0) finalTop = 0; // If even this goes off-screen, place at top
         }
 
-        popupRect.set(left, top, left + totalWidth, top + totalHeight);
+        popupRect.set(proposedLeft, finalTop, proposedLeft + totalWidth, finalTop + totalHeight);
         canvas.drawRoundRect(popupRect, popupCorner, popupCorner, bgPaint);
 
         float bx = popupRect.left + popupPadding;
@@ -867,13 +886,10 @@ public class PopEditText extends View {
     private boolean shouldHideCopyCutForSelection() {
         if (!hasSelection) return true;
 
-        // Hide for select-all and select-all-reduced (requested behavior)
-        if (isSelectAllActive || isEntireFileSelected) return true;
-
         int sL = selStartLine, eL = selEndLine;
         if (sL > eL) { int t = sL; sL = eL; eL = t; }
         long lines = (long) eL - (long) sL + 1L;
-        return lines > 20000L;
+        return lines > HIDE_COPY_CUT_LINES;
     }
 
     private void drawButton(Canvas canvas, RectF r, String label, Paint txtPaint) {
@@ -969,17 +985,14 @@ public class PopEditText extends View {
     private void loadWindowAround(int startLine, @Nullable Runnable onComplete) {
         if (isWindowLoading) return;
 
+        // FIX: If the file has been "cleared" (e.g., via select-all -> delete),
+        // the editor is in a pure in-memory state. The `linesWindow` holds the
+        // entire document. There is nothing to "load" from a file, so we should
+        // simply do nothing. The previous logic incorrectly reset the window.
         if (isFileCleared) {
-            post(() -> {
-                synchronized (linesWindow) {
-                    linesWindow.clear();
-                    linesWindow.add("");
-                    windowStartLine = 0;
-                    isEof = true;
-                }
-                if (onComplete != null) onComplete.run();
-                invalidate();
-            });
+            if (onComplete != null) {
+                post(onComplete);
+            }
             return;
         }
 
@@ -1003,9 +1016,9 @@ public class PopEditText extends View {
 
                 // If we have an index, clamp the window start to the last existing line.
                 if (isIndexReady) {
-                    synchronized (lineOffsets) {
-                        if (!lineOffsets.isEmpty() && actualStart >= lineOffsets.size()) {
-                            actualStart = Math.max(0, lineOffsets.size() - 1);
+                    synchronized (lineOffsetsLock) {
+                        if (lineOffsets.length > 0 && actualStart >= lineOffsets.length) {
+                            actualStart = Math.max(0, lineOffsets.length - 1);
                         }
                     }
                 }
@@ -1017,8 +1030,8 @@ public class PopEditText extends View {
                     try (RandomAccessFile raf = new RandomAccessFile(sourceFile, "r")) {
                         long fileLen = raf.length();
                         long off;
-                        synchronized (lineOffsets) {
-                            if (!lineOffsets.isEmpty() && actualStart < lineOffsets.size()) off = lineOffsets.get(actualStart);
+                        synchronized (lineOffsetsLock) {
+                            if (lineOffsets.length > 0 && actualStart < lineOffsets.length) off = lineOffsets[actualStart];
                             else off = fileLen;
                         }
                         off = Math.max(0, Math.min(off, fileLen));
@@ -1116,12 +1129,9 @@ public class PopEditText extends View {
             long[] offsets = buildIndexJava(sourceFile.getAbsolutePath());
             if (taskVersion != ioTaskVersion.get()) { isIndexBuilding = false; return; }
             if (offsets != null) {
-                List<Long> newOffsets = new ArrayList<>(offsets.length);
-                for (long offset : offsets) newOffsets.add(offset);
-                synchronized (lineOffsets) {
+                synchronized (lineOffsetsLock) {
                     if (taskVersion == ioTaskVersion.get()) {
-                        lineOffsets.clear();
-                        lineOffsets.addAll(newOffsets);
+                        lineOffsets = offsets;
                         isIndexReady = true;
                         // When index is ready, we know the true line count.
                         // We must re-measure to calculate the correct gutter width.
@@ -1129,7 +1139,7 @@ public class PopEditText extends View {
                     }
                 }
             } else {
-                synchronized (lineOffsets) { isIndexReady = false; }
+                synchronized (lineOffsetsLock) { isIndexReady = false; }
             }
             isIndexBuilding = false;
         });
@@ -1155,7 +1165,7 @@ public class PopEditText extends View {
         synchronized (lineWidthCache) { lineWidthCache.clear(); }
         currentMaxWindowLineWidth = 0f;
         globalMaxLineWidth = 0f;
-        synchronized (lineOffsets) { lineOffsets.clear(); }
+        synchronized (lineOffsetsLock) { lineOffsets = new long[0]; }
         isIndexReady = false;
 
         cursorLine = 0;
@@ -1279,8 +1289,8 @@ private void endLargeEditUi(boolean invalidate) {
                 knownTotal = Math.max(1, windowStartLine + linesWindow.size());
             }
         } else if (isIndexReady) {
-            synchronized (lineOffsets) {
-                knownTotal = Math.max(1, lineOffsets.size());
+            synchronized (lineOffsetsLock) {
+                knownTotal = Math.max(1, lineOffsets.length);
             }
         } else if (isEof) {
             synchronized (linesWindow) {
@@ -1667,8 +1677,8 @@ private void endLargeEditUi(boolean invalidate) {
         try (RandomAccessFile raf = new RandomAccessFile(sourceFile, "r")) {
             long startByte;
             if (isIndexReady) {
-                synchronized (lineOffsets) {
-                    if (sL >= 0 && sL < lineOffsets.size()) startByte = lineOffsets.get(sL);
+                synchronized (lineOffsetsLock) {
+                    if (sL >= 0 && sL < lineOffsets.length) startByte = lineOffsets[sL];
                     else startByte = raf.length();
                 }
             } else {
@@ -1724,7 +1734,9 @@ private void endLargeEditUi(boolean invalidate) {
         ioHandler.post(() -> {
             if (taskVersion != ioTaskVersion.get()) { post(() -> callback.onResult(-1)); return; }
             if (isIndexReady && sourceFile != null) {
-                post(() -> callback.onResult(lineOffsets.size()));
+                synchronized (lineOffsetsLock) {
+                    post(() -> callback.onResult(lineOffsets.length));
+                }
                 return;
             }
             int count = 0;
@@ -1833,8 +1845,8 @@ private void endLargeEditUi(boolean invalidate) {
             if (!isIndexReady || sourceFile == null) return;
 
             int fileLastLine;
-            synchronized (lineOffsets) {
-                fileLastLine = Math.max(0, lineOffsets.size() - 1);
+            synchronized (lineOffsetsLock) {
+                fileLastLine = Math.max(0, lineOffsets.length - 1);
             }
 
             // If the current window actually goes beyond file end (due to appended in-memory lines),
@@ -2001,7 +2013,7 @@ private void endLargeEditUi(boolean invalidate) {
             // Transition to in-memory mode, as the file is now gone.
             isFileCleared = true;
             sourceFile = null;
-            synchronized (lineOffsets) { lineOffsets.clear(); }
+            synchronized (lineOffsetsLock) { lineOffsets = new long[0]; }
             isIndexReady = false;
             isIndexBuilding = false;
 
@@ -2086,7 +2098,7 @@ private void endLargeEditUi(boolean invalidate) {
         }
 
         clearSelectionStateAfterDelete();
-        invalidate();
+        keepCursorVisibleHorizontally(); // This scrolls to the new cursor and invalidates.
         endLargeEditUi(false);
 
         if (sourceFile == null || isFileCleared) {
@@ -2197,7 +2209,7 @@ private void endLargeEditUi(boolean invalidate) {
                     currentMaxWindowLineWidth = 0f;
                     globalMaxLineWidth = 0f;
 
-                    synchronized (lineOffsets) { lineOffsets.clear(); }
+                    synchronized (lineOffsetsLock) { lineOffsets = new long[0]; }
                     isIndexReady = false;
                     isIndexBuilding = false;
                     isEof = false;
@@ -2256,12 +2268,12 @@ private void endLargeEditUi(boolean invalidate) {
     private RangeBytes computeByteRangeUsingIndex(File file, int sL, int sC, int eL, int eC) {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             long startLineByte, endLineByte;
-            synchronized (lineOffsets) {
+            synchronized (lineOffsetsLock) {
                 if (!isIndexReady) return null;
                 if (sL < 0 || eL < 0) return null;
-                if (sL >= lineOffsets.size() || eL >= lineOffsets.size()) return null;
-                startLineByte = lineOffsets.get(sL);
-                endLineByte = lineOffsets.get(eL);
+                if (sL >= lineOffsets.length || eL >= lineOffsets.length) return null;
+                startLineByte = lineOffsets[sL];
+                endLineByte = lineOffsets[eL];
             }
 
             String startLineText = readLineUtf8AtByte(raf, startLineByte);
@@ -2705,7 +2717,8 @@ private void endLargeEditUi(boolean invalidate) {
         }
 
         float ex = event.getX(), ey = event.getY();
-        lastTouchX = ex; lastTouchY = ey;
+        lastTouchX = ex;
+        lastTouchY = ey;
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -2959,7 +2972,7 @@ private void endLargeEditUi(boolean invalidate) {
     }
 
     public int getLinesCount() {
-        if (isIndexReady && !lineOffsets.isEmpty()) return lineOffsets.size();
+        if (isIndexReady && lineOffsets.length > 0) return lineOffsets.length;
         if (isEof) return windowStartLine + linesWindow.size();
         if (!linesWindow.isEmpty()) return windowStartLine + linesWindow.size();
         return -1;
@@ -3040,8 +3053,8 @@ private void populateDirectLinesForRange(int startLine, int endLineInclusive, ja
     int end = Math.max(start, endLineInclusive);
 
     int maxLine = -1;
-    synchronized (lineOffsets) {
-        maxLine = lineOffsets.size() - 1;
+    synchronized (lineOffsetsLock) {
+        maxLine = lineOffsets.length - 1;
     }
     if (maxLine < 0) return;
     if (start > maxLine) return;
@@ -3069,9 +3082,9 @@ private void populateDirectLinesForRange(int startLine, int endLineInclusive, ja
         while (segEnd + 1 <= end && !out.containsKey(segEnd + 1)) segEnd++;
 
         long off;
-        synchronized (lineOffsets) {
-            if (segStart >= lineOffsets.size()) break;
-            off = lineOffsets.get(segStart);
+        synchronized (lineOffsetsLock) {
+            if (segStart >= lineOffsets.length) break;
+            off = lineOffsets[segStart];
         }
 
         try (RandomAccessFile raf = new RandomAccessFile(sourceFile, "r")) {
@@ -3143,28 +3156,68 @@ private String getLineTextForRenderWithDirect(int line, @Nullable java.util.Map<
     }
 
     private long[] buildIndexJava(String filepath) {
-        List<Long> offsetsList = new ArrayList<>();
+        int numNewlines = 0;
+        long fileLength = 0;
+
         try (RandomAccessFile raf = new RandomAccessFile(filepath, "r")) {
-            offsetsList.add(0L);
-            long pos = 0;
-            long length = raf.length();
-            byte[] buffer = new byte[8192];
-            while (pos < length) {
-                raf.seek(pos);
-                int bytesRead = raf.read(buffer);
-                if (bytesRead == -1) break;
-                for (int i = 0; i < bytesRead; i++) {
-                    if (buffer[i] == '\n') offsetsList.add(pos + i + 1);
-                }
-                pos += bytesRead;
+            fileLength = raf.length();
+            if (fileLength == 0) {
+                return new long[0]; // Empty file has no lines
             }
-            long[] arr = new long[offsetsList.size()];
-            for (int i = 0; i < offsetsList.size(); i++) arr[i] = offsetsList.get(i);
-            return arr;
+
+            byte[] buffer = new byte[8192];
+            long currentReadPos = 0;
+            while (currentReadPos < fileLength) {
+                raf.seek(currentReadPos);
+                int bytesRead = raf.read(buffer);
+                if (bytesRead == -1) break; // EOF
+
+                for (int i = 0; i < bytesRead; i++) {
+                    if (buffer[i] == '\n') {
+                        numNewlines++;
+                    }
+                }
+                currentReadPos += bytesRead;
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return null; // Return null on error
         }
+
+        // The number of lines is (number of newlines) + 1.
+        // So the array size needs to be numNewlines + 1.
+        long[] offsetsArray = new long[numNewlines + 1];
+        int currentOffsetIndex = 0;
+
+        try (RandomAccessFile raf = new RandomAccessFile(filepath, "r")) {
+            offsetsArray[currentOffsetIndex++] = 0L; // First line starts at offset 0
+            long currentPos = 0;
+            byte[] buffer = new byte[8192];
+            while (currentPos < fileLength) {
+                raf.seek(currentPos);
+                int bytesRead = raf.read(buffer);
+                if (bytesRead == -1) break; // EOF
+
+                for (int i = 0; i < bytesRead; i++) {
+                    if (buffer[i] == '\n') {
+                        // Store the offset of the character *after* the newline
+                        if (currentOffsetIndex < offsetsArray.length) {
+                            offsetsArray[currentOffsetIndex++] = currentPos + i + 1;
+                        } else {
+                            // This should not happen if the first pass line counting is correct.
+                            // But as a safeguard, if we somehow counted more newlines than array size, break.
+                            break;
+                        }
+                    }
+                }
+                currentPos += bytesRead;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null; // Return null on error
+        }
+
+        return offsetsArray;
     }
 
     private void cancelAndCloseReader() {
