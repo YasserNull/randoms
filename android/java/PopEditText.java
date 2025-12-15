@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.text.Editable;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
+import android.view.ScaleGestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -104,6 +105,12 @@ public class PopEditText extends View {
     };
     private final OverScroller scroller;
     private final GestureDetector gestureDetector;
+
+    // --- Zoom State ---
+    private boolean isZoomEnabled = true;
+    private ScaleGestureDetector scaleGestureDetector;
+    private static final float MIN_TEXT_SIZE = 10f;
+    private static final float MAX_TEXT_SIZE = 120f;
 
     // caret
     private int cursorLine = 0;
@@ -392,6 +399,24 @@ public class PopEditText extends View {
             }
         });
 
+        scaleGestureDetector = new ScaleGestureDetector(ctx, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                if (!isZoomEnabled) {
+                    return false;
+                }
+                float currentSize = paint.getTextSize();
+                float newSize = currentSize * detector.getScaleFactor();
+
+                newSize = Math.max(MIN_TEXT_SIZE, Math.min(newSize, MAX_TEXT_SIZE));
+
+                if (Math.abs(newSize - currentSize) > 0.1f) {
+                    setTextSize(newSize);
+                }
+                return true;
+            }
+        });
+
         lineWidthCache = new LinkedHashMap<Integer, Float>(LINE_WIDTH_CACHE_SIZE, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Integer, Float> eldest) {
@@ -641,7 +666,7 @@ public class PopEditText extends View {
             if (highlightCurrentLine && globalLine == cursorLine && !hasSelection) {
                 float top = Math.round(globalLine * lineHeight);
                 float bottom = Math.round((globalLine + 1) * lineHeight);
-                canvas.drawRect(0, top, Math.max(getMaxLineWidthInWindow(), getWidth() + scrollX), bottom, currentLinePaint);
+                canvas.drawRect(-paddingLeft, top, Math.max(getMaxLineWidthInWindow(), getWidth() + scrollX), bottom, currentLinePaint);
             }
 
             if (hasSelection && selPaint != null) {
@@ -1158,6 +1183,10 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setZoomEnabled(boolean enabled) {
+        this.isZoomEnabled = enabled;
+    }
+
     public void setDisable(boolean disable) {
         this.isDisabled = disable;
         if (disable) {
@@ -1362,6 +1391,7 @@ private void endLargeEditUi(boolean invalidate) {
             if (base == null) base = "";
 
             if (c == '\n') {
+                int oldLineCount = getLinesCount();
                 String before = base.substring(0, Math.min(cursorChar, base.length()));
                 String after = base.substring(Math.min(cursorChar, base.length()));
                 Float oldWidth = lineWidthCache.get(cursorLine);
@@ -1377,6 +1407,11 @@ private void endLargeEditUi(boolean invalidate) {
 
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
                 cursorLine++; cursorChar = 0;
+
+                int newLineCount = getLinesCount();
+                if (showLineNumbers && String.valueOf(oldLineCount).length() != String.valueOf(newLineCount).length()) {
+                    requestLayout();
+                }
             } else {
                 int pos = Math.max(0, Math.min(cursorChar, base.length()));
                 String modified = base.substring(0, pos) + c + base.substring(pos);
@@ -1434,6 +1469,7 @@ private void endLargeEditUi(boolean invalidate) {
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
                 invalidateLineGlobal(cursorLine);
             } else if (cursorLine > 0) {
+                int oldLineCount = getLinesCount();
                 int prevGlobal = cursorLine - 1;
                 ensureLineInWindow(prevGlobal, true);
                 int prevLocal = prevGlobal - windowStartLine;
@@ -1452,6 +1488,11 @@ private void endLargeEditUi(boolean invalidate) {
                 cursorLine = prevGlobal;
                 cursorChar = prev.length();
                 computeWidthForLine(prevGlobal, merged);
+
+                int newLineCount = getLinesCount();
+                if (showLineNumbers && String.valueOf(oldLineCount).length() != String.valueOf(newLineCount).length()) {
+                    requestLayout();
+                }
                 invalidate();
             }
         }
@@ -2061,6 +2102,7 @@ private void endLargeEditUi(boolean invalidate) {
 
     private void applyMultiLineReplaceInWindowNow(int sL, int sC, int eL, int eC, String insertText, CursorTarget target) {
         synchronized (linesWindow) {
+            int oldLineCount = getLinesCount();
             int sLocal = sL - windowStartLine;
             int eLocal = eL - windowStartLine;
             if (sLocal < 0 || eLocal < 0 || sLocal >= linesWindow.size() || eLocal >= linesWindow.size()) return;
@@ -2093,6 +2135,11 @@ private void endLargeEditUi(boolean invalidate) {
 
             cursorLine = Math.max(0, target.line);
             cursorChar = Math.max(0, target.ch);
+
+            int newLineCount = getLinesCount();
+            if (showLineNumbers && oldLineCount > 0 && String.valueOf(oldLineCount).length() != String.valueOf(newLineCount).length()) {
+                requestLayout();
+            }
 
             recalculateMaxLineWidth();
         }
@@ -2479,6 +2526,7 @@ private void endLargeEditUi(boolean invalidate) {
         }
 
         synchronized (linesWindow) {
+            int oldLineCount = getLinesCount();
             String base = getLineFromWindowLocal(local);
             if (base == null) base = "";
             int pos = Math.max(0, Math.min(cursorChar, base.length()));
@@ -2510,6 +2558,11 @@ private void endLargeEditUi(boolean invalidate) {
 
                 cursorLine += (parts.length - 1);
                 cursorChar = lastPart.length();
+            }
+
+            int newLineCount = getLinesCount();
+            if (showLineNumbers && oldLineCount > 0 && String.valueOf(oldLineCount).length() != String.valueOf(newLineCount).length()) {
+                requestLayout();
             }
 
             recalculateMaxLineWidth();
@@ -2642,6 +2695,15 @@ private void endLargeEditUi(boolean invalidate) {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (isDisabled) return true;
+
+        if (isZoomEnabled) {
+            scaleGestureDetector.onTouchEvent(event);
+            if (scaleGestureDetector.isInProgress()) {
+                // If a scale gesture is in progress, consume the event
+                return true;
+            }
+        }
+
         float ex = event.getX(), ey = event.getY();
         lastTouchX = ex; lastTouchY = ey;
 
