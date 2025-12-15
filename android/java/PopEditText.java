@@ -319,6 +319,7 @@ public class PopEditText extends View {
         gestureDetector = new GestureDetector(ctx, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
+                commitComposing(false); // End any active composing when user touches view.
                 if (!scroller.isFinished()) {
                     scroller.computeScrollOffset();
                     scrollX = scroller.getCurrX();
@@ -381,6 +382,7 @@ public class PopEditText extends View {
                     resetCursorBlink();
                     invalidate();
                     showKeyboard();
+                    restartInput();
                 }
             }
 
@@ -412,6 +414,7 @@ public class PopEditText extends View {
                 invalidate();
                 resetCursorBlink();
                 showKeyboard();
+                restartInput();
                 return true;
             }
 
@@ -487,6 +490,7 @@ public class PopEditText extends View {
                 resetCursorBlink();
                 invalidate();
                 showKeyboard();
+                restartInput();
                 return true;
             }
         });
@@ -1536,6 +1540,13 @@ public class PopEditText extends View {
         //     InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
         //     if (imm != null) imm.hideSoftInputFromWindow(getWindowToken(), 0);
         // }
+    }
+
+    private void restartInput() {
+        InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.restartInput(this);
+        }
     }
 
     public void showLoadingCircle(boolean show) {
@@ -3578,4 +3589,4 @@ private String getLineTextForRenderWithDirect(int line, @Nullable java.util.Map<
         cancelAndCloseReader();
         ioThread.quitSafely();
     }
-}
+} 
