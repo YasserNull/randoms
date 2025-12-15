@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface; // Added for Typeface
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -40,9 +41,19 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections; // Added for Collections.sort
+import java.util.SortedSet; // For Draw logic
+import java.util.TreeSet; // For Draw logic
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher; // Added for Matcher
+import java.util.regex.Pattern; // Added for Pattern
 
 public class PopEditText extends View {
+
+    public static final int STYLE_NORMAL = 0;
+    public static final int STYLE_BOLD = 1;
+    public static final int STYLE_ITALIC = 2;
+    public static final int STYLE_BOLD_ITALIC = 3;
 
     // paint & metrics
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -148,6 +159,7 @@ public class PopEditText extends View {
 
     // floating popup (custom)
     private boolean showPopup = false;
+    private boolean isMinimalPopup = false;
     private RectF popupRect = new RectF();
     private RectF btnCopyRect = new RectF();
     private RectF btnCutRect = new RectF();
@@ -172,6 +184,7 @@ public class PopEditText extends View {
     // --- Current Line Highlight State ---
     private boolean highlightCurrentLine = true;
     private int currentLineHighlightColor = 0x202196F3; // Default: translucent gray (more visible)
+    private int currentLineNumberColor = 0xFF2196F3; // Default: same as cursor/handles color
     private final Paint currentLinePaint = new Paint();
 
     private int draggingHandle = 0;
@@ -214,6 +227,61 @@ public class PopEditText extends View {
                     return size() > 600;
                 }
             };
+
+
+    // --- Syntax Highlighting State ---
+    private final List<HighlightRule> highlightRules = new ArrayList<>();
+    private final LinkedHashMap<Integer, List<HighlightSpan>> highlightCache =
+        new LinkedHashMap<Integer, List<HighlightSpan>>(1000, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Integer, List<HighlightSpan>> eldest) {
+                return size() > 1000;
+            }
+        };
+
+    private static class HighlightSpan {
+        final int start;
+        final int end;
+        final Paint paint;
+        HighlightSpan(int start, int end, Paint paint) {
+            this.start = start; this.end = end; this.paint = paint;
+        }
+    }
+
+    private static class HighlightRule {
+        final Pattern pattern;
+        final Paint paint;
+        final int style;
+        final boolean underline;
+
+        HighlightRule(String regex, int style, int color, float baseTextSize, Typeface baseTypeface, boolean underline) {
+            // Handle comments regex gracefully
+            if (regex.equals("//*|#*")) {
+                regex = "(//|#).*";
+            }
+            this.pattern = Pattern.compile(regex);
+            this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            this.paint.setColor(color);
+            this.paint.setTextSize(baseTextSize);
+            this.style = style;
+            this.underline = underline;
+
+            int typefaceStyle;
+            switch (style) {
+                case STYLE_BOLD: typefaceStyle = Typeface.BOLD; break;
+                case STYLE_ITALIC: typefaceStyle = Typeface.ITALIC; break;
+                case STYLE_BOLD_ITALIC: typefaceStyle = Typeface.BOLD_ITALIC; break;
+                default: typefaceStyle = Typeface.NORMAL; break;
+            }
+
+            this.paint.setTypeface(Typeface.create(baseTypeface, typefaceStyle));
+            this.paint.setUnderlineText(underline);
+        }
+
+        void updateTextSize(float size) {
+            paint.setTextSize(size);
+        }
+    }
 
 
     private final Runnable delayedWindowCheck = new Runnable() {
@@ -266,30 +334,54 @@ public class PopEditText extends View {
             @Override
             public void onLongPress(MotionEvent e) {
                 if (movedSinceDown) return;
+
+                // Position calculation
                 float y = e.getY() + scrollY;
                 float x = e.getX() + scrollX - getTextStartX();
                 int line = Math.max(0, (int) (y / lineHeight));
-                ensureLineInWindow(line, true);
+                ensureLineInWindow(line, true); // Make sure line data is available
+
+                // Get line text safely
                 String ln = getLineFromWindowLocal(line - windowStartLine);
-                if (ln == null || ln.isEmpty()) {
-                    onSingleTapUp(e);
-                    return;
-                }
+                if (ln == null) ln = getLineTextForRender(line);
+
                 int charIndex = getCharIndexForX(ln, x);
-                int[] bounds = computeWordBounds(ln, charIndex);
-                selStartLine = selEndLine = line;
-                selStartChar = bounds[0];
-                selEndChar = bounds[1];
-                hasSelection = true;
-                isSelectAllActive = false;
-                isEntireFileSelected = false;
-                selecting = true;
-                cursorLine = line;
-                cursorChar = selEndChar;
-                showPopupAtSelection();
-                resetCursorBlink();
-                invalidate();
-                showKeyboard();
+
+                // Check if the long press was on an "empty" area
+                boolean isEmptyArea = false;
+                if (ln.isEmpty()) {
+                    isEmptyArea = true;
+                } else if (charIndex >= ln.length()) {
+                    isEmptyArea = true; // Tapped on empty space after the text on a line
+                } else if (Character.isWhitespace(ln.charAt(charIndex))) {
+                    isEmptyArea = true; // Tapped on a whitespace character
+                }
+
+                if (isEmptyArea) {
+                    // This is a long press on an empty line or whitespace.
+                    // 1. Set cursor position, hide any old selection/popup.
+                    onSingleTapUp(e);
+                    // 2. Show the minimal "Paste" / "Select All" popup.
+                    showMinimalPopupAtCursor();
+
+                } else {
+                    // This is a long press on a word. Keep existing word selection logic.
+                    isMinimalPopup = false;
+                    int[] bounds = computeWordBounds(ln, charIndex);
+                    selStartLine = selEndLine = line;
+                    selStartChar = bounds[0];
+                    selEndChar = bounds[1];
+                    hasSelection = true;
+                    isSelectAllActive = false;
+                    isEntireFileSelected = false;
+                    selecting = true;
+                    cursorLine = line;
+                    cursorChar = selEndChar;
+                    showPopupAtSelection();
+                    resetCursorBlink();
+                    invalidate();
+                    showKeyboard();
+                }
             }
 
             @Override
@@ -411,7 +503,27 @@ public class PopEditText extends View {
                 newSize = Math.max(MIN_TEXT_SIZE, Math.min(newSize, MAX_TEXT_SIZE));
 
                 if (Math.abs(newSize - currentSize) > 0.1f) {
+                    float oldLineHeight = paint.getFontSpacing();
+                    float focusX = detector.getFocusX();
+                    float focusY = detector.getFocusY();
+
+                    // Determine what point in the document is under the zoom focal point
+                    float docXAtFocus = scrollX + focusX - getTextStartX();
+                    float lineAtFocus = (scrollY + focusY) / oldLineHeight;
+
+                    // Apply the zoom
                     setTextSize(newSize);
+
+                    // Adjust scroll to keep the focal point stationary
+                    float newLineHeight = paint.getFontSpacing();
+                    float scale = newSize / currentSize;
+
+                    scrollX = (docXAtFocus * scale) - (focusX - getTextStartX());
+                    scrollY = (lineAtFocus * newLineHeight) - focusY;
+
+                    clampScrollX();
+                    clampScrollY();
+                    invalidate(); // Redraw with new scroll and text size
                 }
                 return true;
             }
@@ -500,6 +612,28 @@ public class PopEditText extends View {
         }
     }
 
+    public void setCurrentLineNumberColor(int color) {
+        if (this.currentLineNumberColor == color) return;
+        this.currentLineNumberColor = color;
+        if (showLineNumbers) invalidate();
+    }
+
+    public void addHighlightRule(String regex, int style, int color) {
+        addHighlightRule(regex, style, color, false);
+    }
+
+    public void addHighlightRule(String regex, int style, int color, boolean underline) {
+        highlightRules.add(new HighlightRule(regex, style, color, paint.getTextSize(), paint.getTypeface(), underline));
+        highlightCache.clear();
+        invalidate();
+    }
+
+    public void clearHighlightRules() {
+        highlightRules.clear();
+        highlightCache.clear();
+        invalidate();
+    }
+
     public void setLayoutDirection(boolean isRtl) {
         if (this.isRtl == isRtl) return;
         this.isRtl = isRtl;
@@ -509,11 +643,29 @@ public class PopEditText extends View {
     }
     
     public void setTextSize(float size) {
+        float oldSize = paint.getTextSize();
+        if (Math.abs(size - oldSize) < 0.1f) return;
+
         paint.setTextSize(size);
         lineNumbersPaint.setTextSize(size);
         lineHeight = paint.getFontSpacing();
-        recalculateMaxLineWidth();
-        requestLayout(); // Gutter width might change
+
+        for (HighlightRule rule : highlightRules) {
+            rule.updateTextSize(size);
+        }
+        highlightCache.clear();
+
+        // Invalidate caches and approximate new max width
+        synchronized (lineWidthCache) {
+            lineWidthCache.clear();
+        }
+        // Scale the max width instead of recalculating it synchronously.
+        // This is an approximation but avoids massive lag.
+        float scale = size / oldSize;
+        currentMaxWindowLineWidth *= scale;
+        globalMaxLineWidth *= scale;
+
+        requestLayout(); // Still needed for gutter
         invalidate();
     }
 
@@ -616,7 +768,15 @@ public class PopEditText extends View {
             for (int i = firstVisibleLine; i <= lastVisibleLine; i++) {
                 String lineNum = String.valueOf(i + 1);
                 float y = Math.round(((i + 1) * lineHeight) - paint.descent());
-                canvas.drawText(lineNum, lineNumX, y, lineNumbersPaint);
+                // Highlight the current cursor line number
+                if (i == cursorLine) {
+                    int originalColor = lineNumbersPaint.getColor();
+                    lineNumbersPaint.setColor(currentLineNumberColor);
+                    canvas.drawText(lineNum, lineNumX, y, lineNumbersPaint);
+                    lineNumbersPaint.setColor(originalColor);
+                } else {
+                    canvas.drawText(lineNum, lineNumX, y, lineNumbersPaint);
+                }
             }
             canvas.restore();
         }
@@ -676,7 +836,7 @@ public class PopEditText extends View {
                 if (isSelectAllActive) {
                     boolean lineExists = (isEof) ? (globalLine <= windowStartLine + linesWindow.size() - 1) : true;
                     if (lineExists) {
-                        canvas.drawRect(0, top, currentMaxWindowLineWidth, bottom, selPaint);
+                        canvas.drawRect(0, top, currentMaxWindowLineWidth, bottom - 1f, selPaint);
                     }
                 } else {
                     int startLine, endLine, startChar, endChar;
@@ -712,13 +872,14 @@ public class PopEditText extends View {
             }
 
             float y = Math.round(((globalLine + 1) * lineHeight) - paint.descent());
-            canvas.drawText(line, 0, y, paint);
+            paint.setUnderlineText(false); // Force disable underline before drawing
+            drawHighlightedLine(canvas, line, globalLine, y);
         }
 
         if (isFocused() && !hasSelection) {
             String cursorLineText = getLineTextForRender(cursorLine);
             int safeChar = Math.min(cursorChar, cursorLineText.length());
-            float cursorX = paint.measureText(cursorLineText, 0, safeChar);
+            float cursorX = measureText(cursorLineText, safeChar, cursorLine);
             float cursorY = cursorLine * lineHeight;
             if (isCursorVisible) {
                 Paint caretPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -736,12 +897,12 @@ public class PopEditText extends View {
             Paint handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             handlePaint.setColor(cursorAndHandlesColor);
             String startLineText = getLineTextForRender(selStartLine);
-            float startX = paint.measureText(startLineText, 0, Math.min(selStartChar, startLineText.length()));
+            float startX = measureText(startLineText, Math.min(selStartChar, startLineText.length()), selStartLine);
             float startY = selStartLine * lineHeight + lineHeight;
             drawTeardropHandle(canvas, startX, startY, handlePaint);
             leftHandleRect.set(startX - handleRadius, startY, startX + handleRadius, startY + handleRadius * 2);
             String endLineText = getLineTextForRender(selEndLine);
-            float endX = paint.measureText(endLineText, 0, Math.min(selEndChar, endLineText.length()));
+            float endX = measureText(endLineText, Math.min(selEndChar, endLineText.length()), selEndLine);
             float endY = selEndLine * lineHeight + lineHeight;
             drawTeardropHandle(canvas, endX, endY, handlePaint);
             rightHandleRect.set(endX - handleRadius, endY, endX + handleRadius, endY + handleRadius * 2);
@@ -771,6 +932,116 @@ public class PopEditText extends View {
         }
     }
 
+    private void drawHighlightedLine(Canvas canvas, String line, int globalLine, float y) {
+        if (highlightRules.isEmpty() || line.isEmpty()) {
+            canvas.drawText(line, 0, y, paint);
+            return;
+        }
+
+        List<HighlightSpan> spans = highlightCache.get(globalLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line);
+            highlightCache.put(globalLine, spans);
+        }
+
+        if (spans.isEmpty()) {
+            canvas.drawText(line, 0, y, paint);
+            return;
+        }
+
+        float currentX = 0;
+        int lastEnd = 0;
+
+        for (HighlightSpan span : spans) {
+            if (span.start < lastEnd) {
+                continue; // Skip overlapping spans that start before the last one ended
+            }
+
+            // Draw text before the span
+            if (span.start > lastEnd) {
+                canvas.drawText(line, lastEnd, span.start, currentX, y, paint);
+                currentX += paint.measureText(line, lastEnd, span.start);
+            }
+
+            // Draw the highlighted span
+            canvas.drawText(line, span.start, span.end, currentX, y, span.paint);
+            currentX += span.paint.measureText(line, span.start, span.end);
+
+            lastEnd = span.end;
+        }
+
+        // Draw remaining text after the last span
+        if (lastEnd < line.length()) {
+            canvas.drawText(line, lastEnd, line.length(), currentX, y, paint);
+        }
+    }
+
+    private List<HighlightSpan> calculateSpansForLine(String line) {
+        List<HighlightSpan> spans = new ArrayList<>();
+        if (highlightRules.isEmpty() || line.isEmpty()) {
+            return spans;
+        }
+
+        for (HighlightRule rule : highlightRules) {
+            Matcher matcher = rule.pattern.matcher(line);
+            while (matcher.find()) {
+                if (matcher.start() == matcher.end()) continue;
+                spans.add(new HighlightSpan(matcher.start(), matcher.end(), rule.paint));
+            }
+        }
+
+        if (spans.size() > 1) {
+            Collections.sort(spans, (s1, s2) -> Integer.compare(s1.start, s2.start));
+        }
+        return spans;
+    }
+
+    private float measureText(String line, int length, int globalLine) {
+        if (highlightRules.isEmpty() || line.isEmpty() || length == 0) {
+            return paint.measureText(line, 0, length);
+        }
+
+        List<HighlightSpan> spans = highlightCache.get(globalLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line);
+            highlightCache.put(globalLine, spans);
+        }
+
+        if (spans.isEmpty()) {
+            return paint.measureText(line, 0, length);
+        }
+
+        float totalWidth = 0;
+        int lastEnd = 0;
+
+        for (HighlightSpan span : spans) {
+            if (lastEnd >= length) break;
+            if (span.start >= length) break;
+            if (span.start < lastEnd) continue;
+
+            // Measure part before the span
+            if (span.start > lastEnd) {
+                int measureEnd = Math.min(span.start, length);
+                totalWidth += paint.measureText(line, lastEnd, measureEnd);
+            }
+
+            lastEnd = span.start;
+
+            // Measure the span itself
+            int measureEnd = Math.min(span.end, length);
+            totalWidth += span.paint.measureText(line, lastEnd, measureEnd);
+
+            lastEnd = span.end;
+        }
+
+        // Measure remaining part
+        if (lastEnd < length) {
+            totalWidth += paint.measureText(line, lastEnd, length);
+        }
+
+        return totalWidth;
+    }
+
     private void maybeKickWindowLoad(int firstVisibleLine) {
         if (sourceFile == null && !isFileCleared) {
             // in-memory only: no need
@@ -791,98 +1062,116 @@ public class PopEditText extends View {
         canvas.drawPath(path, paint);
     }
 
-    private void drawPopup(Canvas canvas) {
-        Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(0xFF424242);
-        Paint txt = new Paint(Paint.ANTI_ALIAS_FLAG);
-        txt.setTextSize(30f);
-        txt.setColor(0xFFFFFFFF);
-
-        final boolean hideCopyCut = shouldHideCopyCutForSelection();
-
-        // reset rects (so .contains() is safe when buttons are hidden)
-        btnCopyRect.setEmpty();
-        btnCutRect.setEmpty();
-        btnPasteRect.setEmpty();
-        btnDeleteRect.setEmpty();
-        btnSelectAllRect.setEmpty();
-
-        // Buttons order
-        final List<String> labels = new ArrayList<>();
-        if (!hideCopyCut) {
-            labels.add("Copy");
-            labels.add("Cut");
-        }
-        labels.add("Paste");
-        labels.add("Delete");
-        labels.add("Select All");
-
-        final int btnCount = labels.size();
-        float totalWidth = (btnWidth * btnCount) + (btnSpacing * (btnCount - 1)) + (popupPadding * 2);
-        float totalHeight = btnHeight + (popupPadding * 2);
-
-        // Calculate the anchor point for the popup relative to the view.
-        // This should be the position of the selection handle.
-        String ln = getLineTextForRender(selEndLine);
-        float selX = paint.measureText(ln, 0, Math.max(0, Math.min(selEndChar, ln.length())));
-        
-        // Handle X position: center of the handle is at getTextStartX() + selX - scrollX
-        float handleCenterX = getTextStartX() + selX - scrollX;
-        
-        // Handle Y position: The handle teardrop starts at selEndLine * lineHeight + lineHeight (bottom of line)
-        // and extends downwards by handleRadius * 2. So the bottom of the handle is:
-        float handleBottomY = selEndLine * lineHeight - scrollY + lineHeight + handleRadius * 2;
-
-        float proposedLeft = handleCenterX - totalWidth / 2f;
-
-        // Clamp horizontal position to screen bounds
-        if (proposedLeft < 0) proposedLeft = 0;
-        if (proposedLeft + totalWidth > getWidth()) proposedLeft = getWidth() - totalWidth;
-
-        // Calculate vertical positions:
-        // 1. Above the handle
-        float topAboveHandle = handleBottomY - totalHeight - (lineHeight * 0.5f); // Half a line height padding
-        // 2. Below the handle
-        float topBelowHandle = handleBottomY + (lineHeight * 0.5f); // Half a line height padding
-
-        float finalTop;
-        // The effective bottom boundary for the popup (top of keyboard or bottom of view)
-        float visibleBottomBound = getHeight() - keyboardHeight;
-
-        // Attempt to place above handle first
-        if (topAboveHandle >= 0 && (topAboveHandle + totalHeight <= visibleBottomBound)) {
-            finalTop = topAboveHandle;
-        } else if (topBelowHandle + totalHeight <= visibleBottomBound) {
-            // Doesn't fit above, try below (if it fits above keyboard)
-            finalTop = topBelowHandle;
-        } else {
-            // Neither above nor below the handle fits entirely within the visible area above the keyboard.
-            // As a last resort, place it as high as possible without going into the keyboard area.
-            finalTop = visibleBottomBound - totalHeight - popupPadding;
-            if (finalTop < 0) finalTop = 0; // If even this goes off-screen, place at top
-        }
-
-        popupRect.set(proposedLeft, finalTop, proposedLeft + totalWidth, finalTop + totalHeight);
-        canvas.drawRoundRect(popupRect, popupCorner, popupCorner, bgPaint);
-
-        float bx = popupRect.left + popupPadding;
-        float by = popupRect.top + popupPadding;
-
-        for (String label : labels) {
-            RectF r;
-            switch (label) {
-                case "Copy": r = btnCopyRect; break;
-                case "Cut": r = btnCutRect; break;
-                case "Paste": r = btnPasteRect; break;
-                case "Delete": r = btnDeleteRect; break;
-                default: r = btnSelectAllRect; break;
+        private void drawPopup(Canvas canvas) {
+            Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bgPaint.setColor(0xFF424242);
+            Paint txt = new Paint(Paint.ANTI_ALIAS_FLAG);
+            txt.setTextSize(30f);
+            txt.setColor(0xFFFFFFFF);
+    
+            // reset rects (so .contains() is safe when buttons are hidden)
+            btnCopyRect.setEmpty();
+            btnCutRect.setEmpty();
+            btnPasteRect.setEmpty();
+            btnDeleteRect.setEmpty();
+            btnSelectAllRect.setEmpty();
+    
+            // Buttons order
+            final List<String> labels = new ArrayList<>();
+            if (isMinimalPopup) {
+                labels.add("Paste");
+                labels.add("Select All");
+            } else {
+                final boolean hideCopyCut = shouldHideCopyCutForSelection();
+                if (!hideCopyCut) {
+                    labels.add("Copy");
+                    labels.add("Cut");
+                }
+                labels.add("Paste");
+                labels.add("Delete");
+                labels.add("Select All");
             }
-            r.set(bx, by, bx + btnWidth, by + btnHeight);
-            drawButton(canvas, r, label, txt);
-            bx += btnWidth + btnSpacing;
+    
+            if (labels.isEmpty()) {
+                hidePopup();
+                return;
+            }
+    
+            final int btnCount = labels.size();
+            float totalWidth = (btnWidth * btnCount) + (btnSpacing * (btnCount - 1)) + (popupPadding * 2);
+            float totalHeight = btnHeight + (popupPadding * 2);
+    
+            // --- POPUP POSITIONING LOGIC ---
+    
+            float anchorX, anchorY_top, anchorY_bottom;
+    
+            if (isMinimalPopup || !hasSelection) {
+                // Anchor to cursor
+                String cursorLineText = getLineTextForRender(cursorLine);
+                anchorX = getTextStartX() + paint.measureText(cursorLineText, 0, Math.max(0, Math.min(cursorChar, cursorLineText.length()))) - scrollX;
+                anchorY_top = cursorLine * lineHeight - scrollY;
+                anchorY_bottom = (cursorLine + 1) * lineHeight - scrollY;
+            } else {
+                // Anchor to selection (existing logic)
+                int nStartLine, nEndLine, nEndChar;
+                String endLineText;
+                if (comparePos(selStartLine, selStartChar, selEndLine, selEndChar) <= 0) {
+                    nStartLine = selStartLine;
+                    nEndLine = selEndLine;
+                    nEndChar = selEndChar;
+                    endLineText = getLineTextForRender(nEndLine);
+                } else {
+                    nStartLine = selEndLine;
+                    nEndLine = selStartLine;
+                    nEndChar = selStartChar;
+                    endLineText = getLineTextForRender(nEndLine);
+                }
+    
+                anchorY_top = nStartLine * lineHeight - scrollY;
+                anchorY_bottom = (nEndLine + 1) * lineHeight - scrollY;
+                anchorX = getTextStartX() + paint.measureText(endLineText, 0, Math.max(0, Math.min(nEndChar, endLineText.length()))) - scrollX;
+            }
+    
+            float proposedLeft = anchorX - totalWidth / 2f;
+            if (proposedLeft < 0) proposedLeft = 0;
+            if (proposedLeft + totalWidth > getWidth()) proposedLeft = getWidth() - totalWidth;
+    
+            final float popupVerticalPadding = lineHeight * 0.75f;
+    
+            float topAbove = anchorY_top - totalHeight - popupVerticalPadding;
+            float topBelow = anchorY_bottom + popupVerticalPadding;
+    
+            float finalTop;
+            float visibleBottomBound = getHeight() - keyboardHeight;
+    
+            if (topAbove >= 0) {
+                finalTop = topAbove;
+            } else if (topBelow + totalHeight <= visibleBottomBound) {
+                finalTop = topBelow;
+            } else {
+                finalTop = Math.max(0, visibleBottomBound - totalHeight - popupPadding);
+            }
+    
+            popupRect.set(proposedLeft, finalTop, proposedLeft + totalWidth, finalTop + totalHeight);
+            canvas.drawRoundRect(popupRect, popupCorner, popupCorner, bgPaint);
+    
+            float bx = popupRect.left + popupPadding;
+            float by = popupRect.top + popupPadding;
+    
+            for (String label : labels) {
+                RectF r;
+                switch (label) {
+                    case "Copy": r = btnCopyRect; break;
+                    case "Cut": r = btnCutRect; break;
+                    case "Paste": r = btnPasteRect; break;
+                    case "Delete": r = btnDeleteRect; break;
+                    default: r = btnSelectAllRect; break;
+                }
+                r.set(bx, by, bx + btnWidth, by + btnHeight);
+                drawButton(canvas, r, label, txt);
+                bx += btnWidth + btnSpacing;
+            }
         }
-    }
-
     private boolean shouldHideCopyCutForSelection() {
         if (!hasSelection) return true;
 
@@ -899,14 +1188,23 @@ public class PopEditText extends View {
         canvas.drawText(label, cx - textWidth / 2f, cy, txtPaint);
     }
 
+    private void showMinimalPopupAtCursor() {
+        if (hasSelection) return;
+        isMinimalPopup = true;
+        showPopup = true;
+        invalidate();
+    }
+
     private void showPopupAtSelection() {
         if (!hasSelection) return;
+        isMinimalPopup = false;
         showPopup = true;
         invalidate();
     }
 
     private void hidePopup() {
         showPopup = false;
+        isMinimalPopup = false;
         invalidate();
     }
 
@@ -1148,6 +1446,36 @@ public class PopEditText extends View {
     private void invalidatePendingIO() {
         ioTaskVersion.incrementAndGet();
         ioHandler.removeCallbacksAndMessages(null);
+        highlightCache.clear();
+    }
+
+    public void clearContent() {
+        invalidatePendingIO();
+        sourceFile = null;
+        isFileCleared = true;
+        isSelectAllActive = false;
+        isEntireFileSelected = false;
+        isIndexReady = false;
+
+        synchronized (linesWindow) {
+            linesWindow.clear();
+            linesWindow.add("");
+        }
+        synchronized (modifiedLines) { modifiedLines.clear(); }
+        synchronized (lineWidthCache) { lineWidthCache.clear(); }
+        highlightCache.clear();
+        currentMaxWindowLineWidth = 0f;
+        globalMaxLineWidth = 0f;
+
+        cursorLine = 0;
+        cursorChar = 0;
+        isEof = true;
+        scrollY = 0;
+        scrollX = 0;
+
+        recalculateMaxLineWidth();
+        requestLayout();
+        invalidate();
     }
 
     public void loadFromFile(final File file) {
@@ -1163,6 +1491,7 @@ public class PopEditText extends View {
         }
         synchronized (modifiedLines) { modifiedLines.clear(); }
         synchronized (lineWidthCache) { lineWidthCache.clear(); }
+        highlightCache.clear();
         currentMaxWindowLineWidth = 0f;
         globalMaxLineWidth = 0f;
         synchronized (lineOffsetsLock) { lineOffsets = new long[0]; }
@@ -1199,10 +1528,14 @@ public class PopEditText extends View {
 
     public void setDisable(boolean disable) {
         this.isDisabled = disable;
-        if (disable) {
-            InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.hideSoftInputFromWindow(getWindowToken(), 0);
-        }
+        // The keyboard should not be hidden automatically when the view is disabled
+        // for background operations, as this provides a poor user experience for
+        // quick operations like 'select all' -> 'delete'. The modal loading
+        // indicator is sufficient to block interaction.
+        // if (disable) {
+        //     InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        //     if (imm != null) imm.hideSoftInputFromWindow(getWindowToken(), 0);
+        // }
     }
 
     public void showLoadingCircle(boolean show) {
@@ -1416,6 +1749,7 @@ private void endLargeEditUi(boolean invalidate) {
                 computeWidthForLine(cursorLine + 1, after);
 
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
+                highlightCache.clear();
                 cursorLine++; cursorChar = 0;
 
                 int newLineCount = getLinesCount();
@@ -1427,6 +1761,7 @@ private void endLargeEditUi(boolean invalidate) {
                 String modified = base.substring(0, pos) + c + base.substring(pos);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
+                highlightCache.remove(cursorLine);
                 cursorChar++;
                 float newWidth = paint.measureText(modified);
                 synchronized (lineWidthCache) { lineWidthCache.put(cursorLine, newWidth); }
@@ -1474,6 +1809,7 @@ private void endLargeEditUi(boolean invalidate) {
                 String modified = base.substring(0, safeStart) + base.substring(cursorChar);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
+                highlightCache.remove(cursorLine);
                 cursorChar = safeStart;
                 computeWidthForLine(cursorLine, modified);
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
@@ -1491,6 +1827,7 @@ private void endLargeEditUi(boolean invalidate) {
                 String merged = prev + base;
                 updateLocalLine(prevLocal, merged);
                 modifiedLines.put(prevGlobal, merged);
+                highlightCache.clear();
 
                 if (localIdx < linesWindow.size()) linesWindow.remove(localIdx);
 
