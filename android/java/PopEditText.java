@@ -15,6 +15,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.text.Editable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.ScaleGestureDetector;
 import android.view.KeyEvent;
@@ -239,6 +240,76 @@ public class PopEditText extends View {
             }
         };
 
+    // --- Auto-completion State ---
+    private boolean isAutoCompletionEnabled = false;
+    private final Paint suggestionPaint = new Paint();
+    private String activeSuggestion = null;
+    private int activeSuggestionLine;
+    private int activeSuggestionCharStart; // character index where the word fragment starts
+    private String activeSuggestionWordFragment = ""; // the part user typed
+    private final Trie suggestionTrie = new Trie();
+    private final RectF activeSuggestionRect = new RectF(); // For tap-to-accept
+    private boolean isSuggestionTextSizeCustom = false; // Flag to track if suggestion text size is custom
+    private boolean suggestionAcceptedThisTouch = false; // Flag to prevent GestureDetector interference
+
+    private static class TrieNode {
+        final Map<Character, TrieNode> children = new java.util.TreeMap<>();
+        String word = null;
+    }
+
+    private static class Trie {
+        private final TrieNode root = new TrieNode();
+
+        public void clear() {
+            root.children.clear();
+            root.word = null;
+        }
+
+        public void insert(String word) {
+            if (word == null || word.isEmpty()) return;
+            TrieNode current = root;
+            for (char l : word.toCharArray()) {
+                current = current.children.computeIfAbsent(l, c -> new TrieNode());
+            }
+            current.word = word;
+        }
+
+        public String findFirstSuggestion(String prefix) {
+            if (prefix == null || prefix.isEmpty()) return null;
+            TrieNode current = root;
+            for (char l : prefix.toCharArray()) {
+                TrieNode node = current.children.get(l);
+                if (node == null) {
+                    return null;
+                }
+                current = node;
+            }
+            String suggestion = findFirstWordFromNode(current);
+            // Don't suggest the exact word the user has already typed.
+            if (suggestion != null && suggestion.equals(prefix)) {
+                return null;
+            }
+            return suggestion;
+        }
+
+        private String findFirstWordFromNode(TrieNode node) {
+            if (node == null) return null;
+            // Traverse to the first word available from this node.
+            if (node.word != null) {
+                return node.word;
+            }
+            // Using TreeMap in TrieNode makes this loop alphabetically deterministic.
+            for (TrieNode childNode : node.children.values()) {
+                String found = findFirstWordFromNode(childNode);
+                if (found != null) {
+                    return found;
+                }
+            }
+            return null;
+        }
+    }
+
+
     private static class HighlightSpan {
         final int start;
         final int end;
@@ -328,6 +399,11 @@ public class PopEditText extends View {
         gestureDetector = new GestureDetector(ctx, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
+                // If a suggestion was just accepted, clear the flag and allow normal onDown processing
+                if (suggestionAcceptedThisTouch) {
+                    suggestionAcceptedThisTouch = false; // Reset the flag
+                    // DON'T return false; proceed with normal onDown logic
+                }
                 commitComposing(false); // End any active composing when user touches view.
                 if (!scroller.isFinished()) {
                     scroller.computeScrollOffset();
@@ -343,6 +419,15 @@ public class PopEditText extends View {
 
             @Override
             public void onLongPress(MotionEvent e) {
+                if (suggestionAcceptedThisTouch) return;
+
+                // Check for suggestion tap before anything else
+                if (isAutoCompletionEnabled && activeSuggestion != null && activeSuggestionRect.contains(e.getX(), e.getY())) {
+                    Log.d("PopEditText", "onLongPress: Long-press on active suggestion. Accepting...");
+                    acceptAutoCompletion();
+                    return; // Consume the event, do not proceed to select text
+                }
+
                 if (movedSinceDown) return;
 
                 // Position calculation
@@ -397,6 +482,15 @@ public class PopEditText extends View {
 
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
+                if (suggestionAcceptedThisTouch) return true;
+
+                // Check for suggestion tap before anything else
+                if (isAutoCompletionEnabled && activeSuggestion != null && activeSuggestionRect.contains(e.getX(), e.getY())) {
+                    Log.d("PopEditText", "onSingleTapUp: Tapped on active suggestion. Accepting...");
+                    acceptAutoCompletion();
+                    return true; // Consume the event
+                }
+
                 if (hasSelection) {
                     hasSelection = false;
                     isSelectAllActive = false;
@@ -429,6 +523,7 @@ public class PopEditText extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+                if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
                 movedSinceDown = true;
                 scrollY += distanceY;
                 scrollX += distanceX;
@@ -450,6 +545,7 @@ public class PopEditText extends View {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
                 int startX = Math.round(scrollX);
                 int startY = Math.round(scrollY);
                 int minX = 0;
@@ -476,6 +572,7 @@ public class PopEditText extends View {
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
+                if (suggestionAcceptedThisTouch) return true; // Don't process if suggestion was accepted
                 float y = e.getY() + scrollY;
                 float x = e.getX() + scrollX - getTextStartX();
                 int line = Math.max(0, (int) (y / lineHeight));
@@ -567,6 +664,153 @@ public class PopEditText extends View {
                 post(this::keepCursorVisibleHorizontally);
             }
         });
+
+        // Initialize suggestion paint
+        suggestionPaint.set(paint);
+        suggestionPaint.setColor(0xFFAAAAAA); // Default faint gray
+        suggestionPaint.setAntiAlias(true);
+        suggestionPaint.setSubpixelText(true);
+        suggestionPaint.setHinting(Paint.HINTING_ON);
+        isSuggestionTextSizeCustom = false; // By default, suggestion size follows main text
+    }
+
+    // --- Public APIs for Auto Completion ---
+
+    public void setAutoCompletionEnabled(boolean enabled) {
+        this.isAutoCompletionEnabled = enabled;
+        if (!enabled) {
+            clearActiveSuggestion();
+        }
+        invalidate();
+    }
+
+    public void setSuggestions(List<String> keywords, int color) {
+        suggestionTrie.clear();
+        if (keywords != null) {
+            for (String word : keywords) {
+                suggestionTrie.insert(word);
+            }
+        }
+        // Only set the color. Size and style are synced automatically.
+        suggestionPaint.setColor(color);
+        clearActiveSuggestion();
+    }
+
+    public void acceptAutoCompletion() {
+        Log.d("PopEditText", "acceptAutoCompletion: Entered.");
+        if (!isAutoCompletionEnabled || activeSuggestion == null) {
+            Log.d("PopEditText", "acceptAutoCompletion: Bailed out (disabled or no active suggestion).");
+            return;
+        }
+
+        // Set a flag to ignore subsequent gesture events from this touch sequence.
+        suggestionAcceptedThisTouch = true;
+
+        String textToInsert = activeSuggestion;
+        clearActiveSuggestion();
+        hasSelection = false; // Clear selection after accepting suggestion
+        isSelectAllActive = false;
+        isEntireFileSelected = false;
+        Log.d("PopEditText", "acceptAutoCompletion: Cleared selection flags, inserting text.");
+        insertStringAtCursor(textToInsert);
+        Log.d("PopEditText", "acceptAutoCompletion: Text inserted.");
+
+        // The flag will be reset by the next onDown event.
+    }
+
+    public void setSuggestionTextSize(float size) {
+        suggestionPaint.setTextSize(size);
+        invalidate();
+    }
+
+    // --- Core Logic for Auto Completion ---
+
+    private void clearActiveSuggestion() {
+        if (activeSuggestion != null) {
+            activeSuggestion = null;
+            activeSuggestionRect.setEmpty();
+            invalidate();
+        }
+    }
+
+    private void updateSuggestion() {
+        if (!isAutoCompletionEnabled) {
+            clearActiveSuggestion();
+            return;
+        }
+
+        // Do not show suggestions if the cursor is in the middle of a word
+        String line = getLineTextForRender(cursorLine);
+        if (cursorChar < line.length() && Character.isLetterOrDigit(line.charAt(cursorChar))) {
+            clearActiveSuggestion();
+            return;
+        }
+
+        String wordFragment = getCurrentWordFragment();
+        if (wordFragment.isEmpty()) {
+            clearActiveSuggestion();
+            return;
+        }
+
+        String suggestion = suggestionTrie.findFirstSuggestion(wordFragment);
+        if (suggestion != null && suggestion.length() > wordFragment.length()) {
+            activeSuggestion = suggestion.substring(wordFragment.length());
+            activeSuggestionLine = cursorLine;
+            activeSuggestionCharStart = cursorChar - wordFragment.length();
+            activeSuggestionWordFragment = wordFragment;
+        } else {
+            clearActiveSuggestion();
+        }
+        invalidate();
+    }
+
+    private String getCurrentWordFragment() {
+        String line = getLineTextForRender(cursorLine);
+        if (cursorChar == 0 || cursorChar > line.length()) {
+            return "";
+        }
+        int start = cursorChar;
+        // A word character is a letter or a digit.
+        while (start > 0 && Character.isLetterOrDigit(line.charAt(start - 1))) {
+            start--;
+        }
+        return line.substring(start, cursorChar);
+    }
+
+    private void insertStringAtCursor(String text) {
+        if (text == null || text.isEmpty()) return;
+        if (hasSelection) {
+            replaceSelectionWithText(text);
+            return;
+        }
+        if (text.contains("\n")) { // Not handled for simplicity, suggestions shouldn't have newlines.
+            for(char c : text.toCharArray()) insertCharAtCursor(c);
+            return;
+        }
+        invalidatePendingIO();
+        editVersion.incrementAndGet();
+
+        ensureLineInWindow(cursorLine, true);
+        if (isWindowLoading && (cursorLine < windowStartLine || cursorLine >= windowStartLine + linesWindow.size())) {
+            post(() -> insertStringAtCursor(text));
+            return;
+        }
+
+        int localIdx = cursorLine - windowStartLine;
+        synchronized (linesWindow) {
+            String base = getLineFromWindowLocal(localIdx);
+            if(base == null) base = "";
+            int pos = Math.max(0, Math.min(cursorChar, base.length()));
+            String modified = base.substring(0, pos) + text + base.substring(pos);
+            updateLocalLine(localIdx, modified);
+            modifiedLines.put(cursorLine, modified);
+            highlightCache.remove(cursorLine);
+            cursorChar += text.length();
+            computeWidthForLine(cursorLine, modified);
+            recalculateMaxLineWidth();
+            keepCursorVisibleHorizontally();
+            invalidate();
+        }
     }
 
     // --- Public APIs for Line Numbers ---
@@ -666,6 +910,10 @@ public class PopEditText extends View {
         if (Math.abs(size - oldSize) < 0.1f) return;
 
         paint.setTextSize(size);
+        // Only update suggestionPaint if it's not custom-set
+        if (!isSuggestionTextSizeCustom) {
+            suggestionPaint.setTextSize(size);
+        }
         lineNumbersPaint.setTextSize(size);
         lineHeight = paint.getFontSpacing();
 
@@ -897,6 +1145,9 @@ public class PopEditText extends View {
             drawColorCodeBackgrounds(canvas, line, globalLine);
 
             drawHighlightedLine(canvas, line, globalLine, y);
+
+            // Draw auto-completion suggestion
+            drawAutoSuggestion(canvas, line, globalLine, y);
         }
 
         if (isFocused() && !hasSelection) {
@@ -939,6 +1190,7 @@ public class PopEditText extends View {
         if (showPopup) drawPopup(canvas);
 
         if (showLoadingCircle) {
+
             Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             circlePaint.setColor(loadingCircleColor);
             circlePaint.setStyle(Paint.Style.STROKE);
@@ -1844,6 +2096,7 @@ private void endLargeEditUi(boolean invalidate) {
             invalidate();
             keepCursorVisibleHorizontally();
         }
+        updateSuggestion();
     }
 
     public void insertNewlineAtCursor() {
@@ -1853,6 +2106,7 @@ private void endLargeEditUi(boolean invalidate) {
     public void deleteCharAtCursor() {
         invalidatePendingIO();
         editVersion.incrementAndGet();
+        clearActiveSuggestion(); // Clear suggestion on delete
 
         if (hasComposing) { deleteComposing(); return; }
         if (isFileCleared) {
@@ -1860,6 +2114,7 @@ private void endLargeEditUi(boolean invalidate) {
                 cursorChar = Math.max(0, cursorChar - 1);
                 invalidate();
             }
+            updateSuggestion();
             return;
         }
 
@@ -1916,11 +2171,13 @@ private void endLargeEditUi(boolean invalidate) {
                 invalidate();
             }
         }
+        updateSuggestion(); // Update suggestion after deletion
     }
 
     public void deleteForwardAtCursor() {
         invalidatePendingIO();
         editVersion.incrementAndGet();
+        clearActiveSuggestion(); // Clear suggestion on delete forward
 
         if (hasComposing) { deleteComposing(); return; }
         if (isFileCleared) return;
@@ -1963,6 +2220,7 @@ private void endLargeEditUi(boolean invalidate) {
                 }
             }
         }
+        updateSuggestion(); // Update suggestion after delete forward
     }
 
     private void commitComposing(boolean keepInText) {
@@ -1970,6 +2228,7 @@ private void endLargeEditUi(boolean invalidate) {
         hasComposing = false;
         composingLength = 0;
         invalidate();
+        updateSuggestion();
     }
 
     private void replaceComposingWith(CharSequence textSeq) {
@@ -1997,6 +2256,7 @@ private void endLargeEditUi(boolean invalidate) {
             recalculateMaxLineWidth();
             invalidate();
         }
+        updateSuggestion();
     }
 
     private void deleteComposing() {
@@ -2033,6 +2293,7 @@ private void endLargeEditUi(boolean invalidate) {
 
     private void copyOrCutSelection(final boolean cut) {
         if (!hasSelection) return;
+        clearActiveSuggestion(); // Clear suggestion when copying/cutting
 
         // Hidden/disabled for huge selections (requested behavior)
         if (shouldHideCopyCutForSelection()) return;
@@ -2127,6 +2388,7 @@ private void endLargeEditUi(boolean invalidate) {
     public void pasteFromClipboard() {
         invalidatePendingIO();
         editVersion.incrementAndGet();
+        clearActiveSuggestion(); // Clear suggestion when pasting
 
         ClipboardManager cm = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null || !cm.hasPrimaryClip()) return;
@@ -2135,6 +2397,7 @@ private void endLargeEditUi(boolean invalidate) {
         CharSequence txt = cd.getItemAt(0).coerceToText(getContext());
         if (txt == null) return;
         insertTextAtCursor(txt.toString());
+        updateSuggestion(); // Update suggestion after pasting
     }
 
     interface LineCountCallback { void onResult(int count); }
@@ -2166,6 +2429,7 @@ private void endLargeEditUi(boolean invalidate) {
     }
 
     public void selectAll() {
+        clearActiveSuggestion(); // Clear suggestion when selecting all
         final boolean keyboardWasVisible = keyboardHeight > 0;
         setDisable(true);
         showLoadingCircle(true);
@@ -2361,6 +2625,7 @@ private void endLargeEditUi(boolean invalidate) {
     // DELETE/REPLACE SELECTION (FIXED)
     // ==============================
     public void deleteSelection() {
+        clearActiveSuggestion(); // Clear suggestion when deleting selection
         replaceSelectionWithText("");
     }
 
@@ -2388,12 +2653,14 @@ private void endLargeEditUi(boolean invalidate) {
     private void replaceSelectionWithText(String insertText) {
         invalidatePendingIO();
         final int opToken = editVersion.incrementAndGet();
+        clearActiveSuggestion(); // Clear suggestion when replacing selection
 
         if (insertText == null) insertText = "";
 
         if (!hasSelection) {
             if (!insertText.isEmpty()) insertTextAtCursor(insertText);
             // No selection means no large edit UI was started for it.
+            updateSuggestion();
             return;
         }
 
@@ -2453,6 +2720,7 @@ private void endLargeEditUi(boolean invalidate) {
             recalculateMaxLineWidth();
             keepCursorVisibleHorizontally();
             requestLayout(); // Request layout to update gutter width after content cleared
+            updateSuggestion();
             return;
         }
 
@@ -2492,6 +2760,7 @@ private void endLargeEditUi(boolean invalidate) {
             invalidate();
             keepCursorVisibleHorizontally();
             endLargeEditUi(false);
+            updateSuggestion();
             return;
         }
 
@@ -2514,12 +2783,14 @@ private void endLargeEditUi(boolean invalidate) {
         if (sourceFile == null || isFileCleared) {
             if (!insertText.isEmpty()) insertTextAtCursor(insertText);
             endLargeEditUi(false);
+            updateSuggestion();
             return;
         }
 
         final File inFile = sourceFile;
         // ابدأ إعادة كتابة الملف في الخلفية بدون تعطيل الواجهة وبدون دائرة تحميل.
         rewriteReplaceRangeAsync(opToken, inFile, sL, sC, eL, eC, insertText, target);
+        updateSuggestion();
     }
 
     private void applyMultiLineReplaceInWindowNow(int sL, int sC, int eL, int eC, String insertText, CursorTarget target) {
@@ -2992,9 +3263,11 @@ private void endLargeEditUi(boolean invalidate) {
             resetCursorBlink();
             invalidate();
         }
+        updateSuggestion();
     }
 
     private void ensureLineInWindow(int globalLine, boolean blockingIfAbsent) {
+        clearActiveSuggestion(); // Clear suggestion when window/view changes
         if (globalLine >= windowStartLine && globalLine < windowStartLine + linesWindow.size()) return;
         if (sourceFile != null) {
             int targetStart = Math.max(0, globalLine - prefetchLines);
@@ -3069,17 +3342,20 @@ private void endLargeEditUi(boolean invalidate) {
                 if (hasSelection) {
                     replaceSelectionWithText(text.toString());
                     commitComposing(true);
+                    updateSuggestion();
                     return true;
                 }
 
                 if (hasComposing) {
                     replaceComposingWith(text);
                     commitComposing(true);
+                    updateSuggestion();
                     return true;
                 }
 
                 insertTextAtCursor(text.toString());
                 commitComposing(true);
+                updateSuggestion();
                 return true;
             }
 
@@ -3089,6 +3365,7 @@ private void endLargeEditUi(boolean invalidate) {
 
                 if (hasSelection) {
                     replaceSelectionWithText(text.toString());
+                    updateSuggestion();
                     return true;
                 }
 
@@ -3097,6 +3374,7 @@ private void endLargeEditUi(boolean invalidate) {
                     composingLine = cursorLine; composingOffset = cursorChar; composingLength = 0; hasComposing = true;
                 }
                 replaceComposingWith(text);
+                updateSuggestion();
                 return true;
             }
 
@@ -3105,10 +3383,12 @@ private void endLargeEditUi(boolean invalidate) {
 
                 if (hasSelection) {
                     replaceSelectionWithText("");
+                    updateSuggestion();
                     return true;
                 }
                 for (int i = 0; i < beforeLength; i++) deleteCharAtCursor();
                 for (int i = 0; i < afterLength; i++) deleteForwardAtCursor();
+                updateSuggestion();
                 return true;
             }
         };
@@ -3135,6 +3415,7 @@ private void endLargeEditUi(boolean invalidate) {
                 resetCursorBlink();
                 if (!isFocused()) requestFocus();
                 pointerDown = true; downX = ex; downY = ey; movedSinceDown = false;
+                suggestionAcceptedThisTouch = false; // Reset flag for new touch sequence
 
                 if (showPopup && (btnCopyRect.contains(ex, ey) || btnCutRect.contains(ex, ey) ||
                         btnPasteRect.contains(ex, ey) || btnDeleteRect.contains(ex, ey) || btnSelectAllRect.contains(ex, ey))) return true;
@@ -3182,7 +3463,19 @@ private void endLargeEditUi(boolean invalidate) {
 
             case MotionEvent.ACTION_UP:
                 mainHandler.removeCallbacks(autoScrollRunnable);
+                
+                // --- Check for tap on suggestion FIRST and consume if it's a clean tap ---
+                if (!movedSinceDown && isAutoCompletionEnabled && activeSuggestion != null && !activeSuggestionRect.isEmpty() && activeSuggestionRect.contains(ex, ey)) {
+                    Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion tap detected. Calling acceptAutoCompletion.");
+                    acceptAutoCompletion(); // Call synchronously
+                    pointerDown = false; // Reset pointerDown state
+                    Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion accepted, returning true.");
+                    return true; // Consume the event, preventing further processing
+                }
+                // --- END Check ---
+
                 pointerDown = false;
+                //clearActiveSuggestion(); 
 
                 if (showPopup) {
                     if (btnCopyRect.contains(ex, ey)) { copySelectionToClipboard(); hasSelection = false; isSelectAllActive = false; hidePopup(); invalidate(); return true; }
@@ -3197,13 +3490,21 @@ private void endLargeEditUi(boolean invalidate) {
                     draggingHandle = 0; invalidate(); return true;
                 }
 
-                if (movedSinceDown && scroller.isFinished() && hasSelection) showPopupAtSelection();
+                if (movedSinceDown && scroller.isFinished()) { // Just finished a scroll/drag
+                    if(hasSelection) showPopupAtSelection();
+                    restartInput(); // Sync IME state
+                    Log.d("PopEditText", "onTouchEvent.ACTION_UP: Scroll/Zoom ended, restarted input.");
+                }
+
+                Log.d("PopEditText", "onTouchEvent.ACTION_UP: Passing to GestureDetector.ACTION_UP.");
                 gestureDetector.onTouchEvent(event);
                 return true;
 
             case MotionEvent.ACTION_CANCEL:
                 mainHandler.removeCallbacks(autoScrollRunnable);
                 pointerDown = false; draggingHandle = 0; selecting = false;
+                clearActiveSuggestion(); // Clear suggestion on touch cancel
+                Log.d("PopEditText", "onTouchEvent.ACTION_CANCEL: Passing to GestureDetector.");
                 gestureDetector.onTouchEvent(event);
                 return true;
         }
@@ -3285,6 +3586,7 @@ private void endLargeEditUi(boolean invalidate) {
     }
 
     private void moveCursorLeft() {
+        clearActiveSuggestion(); // Clear suggestion when cursor moves
         if (hasSelection) {
             int sL = selStartLine, sC = selStartChar;
             if (comparePos(selStartLine, selStartChar, selEndLine, selEndChar) > 0) {
@@ -3300,9 +3602,11 @@ private void endLargeEditUi(boolean invalidate) {
         hasSelection = false; isSelectAllActive = false; isEntireFileSelected = false; hidePopup();
         resetCursorBlink();
         invalidate(); keepCursorVisibleHorizontally();
+        updateSuggestion(); // Update suggestion after cursor move
     }
 
     private void moveCursorRight() {
+        clearActiveSuggestion(); // Clear suggestion when cursor moves
         if (hasSelection) {
             int eL = selEndLine, eC = selEndChar;
             if (comparePos(selStartLine, selStartChar, selEndLine, selEndChar) > 0) {
@@ -3322,9 +3626,11 @@ private void endLargeEditUi(boolean invalidate) {
         hasSelection = false; isSelectAllActive = false; isEntireFileSelected = false; hidePopup();
         resetCursorBlink();
         invalidate(); keepCursorVisibleHorizontally();
+        updateSuggestion(); // Update suggestion after cursor move
     }
 
     private void moveCursorUp() {
+        clearActiveSuggestion(); // Clear suggestion when cursor moves
         if (hasSelection) {
             int sL = selStartLine, sC = selStartChar;
             if (comparePos(selStartLine, selStartChar, selEndLine, selEndChar) > 0) {
@@ -3340,9 +3646,11 @@ private void endLargeEditUi(boolean invalidate) {
         hasSelection = false; isSelectAllActive = false; isEntireFileSelected = false; hidePopup();
         resetCursorBlink();
         invalidate(); keepCursorVisibleHorizontally();
+        updateSuggestion(); // Update suggestion after cursor move
     }
 
     private void moveCursorDown() {
+        clearActiveSuggestion(); // Clear suggestion when cursor moves
         if (hasSelection) {
             int eL = selEndLine, eC = selEndChar;
             if (comparePos(selStartLine, selStartChar, selEndLine, selEndChar) > 0) {
@@ -3359,11 +3667,13 @@ private void endLargeEditUi(boolean invalidate) {
         hasSelection = false; isSelectAllActive = false; isEntireFileSelected = false; hidePopup();
         resetCursorBlink();
         invalidate(); keepCursorVisibleHorizontally();
+        updateSuggestion(); // Update suggestion after cursor move
     }
 
     @Override
     protected void onFocusChanged(boolean focused, int direction, Rect previouslyFocusedRect) {
         super.onFocusChanged(focused, direction, previouslyFocusedRect);
+        clearActiveSuggestion(); // Clear suggestion on focus change
         InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
         if (focused) {
             if (imm != null) imm.restartInput(this);
@@ -3453,6 +3763,38 @@ private void endLargeEditUi(boolean invalidate) {
         invalidate();
     }
 
+    private void drawAutoSuggestion(Canvas canvas, String lineContent, int globalLine, float textBaselineY) {
+        if (!isAutoCompletionEnabled || activeSuggestion == null || globalLine != activeSuggestionLine) {
+            return;
+        }
+
+        int cursorPositionInLine = activeSuggestionCharStart + activeSuggestionWordFragment.length();
+        if (cursorPositionInLine > lineContent.length()) {
+            clearActiveSuggestion();
+            return;
+        }
+
+        // Calculate X position where the suggestion starts
+        float suggestionStartX_canvas = measureText(lineContent, cursorPositionInLine, globalLine);
+        
+        // Draw the suggestion text
+        canvas.drawText(activeSuggestion, suggestionStartX_canvas, textBaselineY, suggestionPaint);
+
+        // Calculate and store the tap area in VIEW coordinates
+        float suggestionTextWidth = suggestionPaint.measureText(activeSuggestion);
+        
+        // The canvas is translated by (getTextStartX() - scrollX, -scrollY)
+        // To get view coordinates:
+        // viewX = canvasX + (scrollX - getTextStartX())
+        // viewY = canvasY + scrollY
+        
+        float left_view = suggestionStartX_canvas + getTextStartX() - scrollX;
+        float right_view = left_view + suggestionTextWidth;
+        float top_view = globalLine * lineHeight - scrollY;
+        float bottom_view = (globalLine + 1) * lineHeight - scrollY;
+
+        activeSuggestionRect.set(left_view, top_view, right_view, bottom_view);
+    }
     
 private void populateDirectLinesForRange(int startLine, int endLineInclusive, java.util.Map<Integer, String> out) {
     if (out == null) return;
