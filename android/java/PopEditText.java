@@ -284,6 +284,15 @@ public class PopEditText extends View {
     }
 
 
+    // --- Color Code Highlighting ---
+    private boolean isColorHighlightingEnabled = false;
+    private final Paint colorOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final Pattern COLOR_HEX_PATTERN = Pattern.compile(
+        "(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))\\b|(\\b0x[a-fA-F0-9]{6,8}\\b)",
+        Pattern.CASE_INSENSITIVE
+    );
+
+
     private final Runnable delayedWindowCheck = new Runnable() {
         @Override
         public void run() {
@@ -638,6 +647,12 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setColorHighlightingEnabled(boolean enabled) {
+        if (isColorHighlightingEnabled == enabled) return;
+        isColorHighlightingEnabled = enabled;
+        invalidate();
+    }
+
     public void setLayoutDirection(boolean isRtl) {
         if (this.isRtl == isRtl) return;
         this.isRtl = isRtl;
@@ -877,6 +892,10 @@ public class PopEditText extends View {
 
             float y = Math.round(((globalLine + 1) * lineHeight) - paint.descent());
             paint.setUnderlineText(false); // Force disable underline before drawing
+
+            // Draw color code backgrounds underneath the text
+            drawColorCodeBackgrounds(canvas, line, globalLine);
+
             drawHighlightedLine(canvas, line, globalLine, y);
         }
 
@@ -998,6 +1017,49 @@ public class PopEditText extends View {
             Collections.sort(spans, (s1, s2) -> Integer.compare(s1.start, s2.start));
         }
         return spans;
+    }
+
+    private void drawColorCodeBackgrounds(Canvas canvas, String line, int globalLine) {
+        if (!isColorHighlightingEnabled || line.isEmpty()) {
+            return;
+        }
+
+        Matcher matcher = COLOR_HEX_PATTERN.matcher(line);
+        while (matcher.find()) {
+            String colorString = matcher.group(0);
+            if (colorString == null || colorString.isEmpty()) continue;
+
+            int color;
+            try {
+                if (colorString.startsWith("0x") || colorString.startsWith("0X")) {
+                    String hex = colorString.substring(2);
+                    if (hex.length() == 6) {
+                        hex = "FF" + hex;
+                    }
+                    color = (int) Long.parseLong(hex, 16);
+                } else {
+                    color = android.graphics.Color.parseColor(colorString);
+                }
+            } catch (Exception e) { // NumberFormatException or IllegalArgumentException
+                continue; // Skip invalid color string
+            }
+
+            // Use a semi-transparent background to avoid contrast issues
+            int backgroundColor = (color & 0x00FFFFFF) | (0xC0 << 24); // 75% opacity
+            colorOverlayPaint.setColor(backgroundColor);
+            colorOverlayPaint.setStyle(Paint.Style.FILL);
+
+            int start = matcher.start();
+            int end = matcher.end();
+
+            float left = measureText(line, start, globalLine);
+            float right = measureText(line, end, globalLine);
+
+            float top = globalLine * lineHeight;
+            float bottom = (globalLine + 1) * lineHeight;
+
+            canvas.drawRect(left, top, right, bottom, colorOverlayPaint);
+        }
     }
 
     private float measureText(String line, int length, int globalLine) {
