@@ -120,6 +120,9 @@ public class PopEditText extends View {
     // --- Zoom State ---
     private boolean isZoomEnabled = true;
     private ScaleGestureDetector scaleGestureDetector;
+    private boolean mJustFinishedScale = false;
+    private boolean isScaling = false;
+    private float lastFocusX, lastFocusY;
     private static final float MIN_TEXT_SIZE = 10f;
     private static final float MAX_TEXT_SIZE = 120f;
 
@@ -404,6 +407,7 @@ public class PopEditText extends View {
                     suggestionAcceptedThisTouch = false; // Reset the flag
                     // DON'T return false; proceed with normal onDown logic
                 }
+                mJustFinishedScale = false;
                 commitComposing(false); // End any active composing when user touches view.
                 if (!scroller.isFinished()) {
                     scroller.computeScrollOffset();
@@ -421,13 +425,7 @@ public class PopEditText extends View {
             public void onLongPress(MotionEvent e) {
                 if (suggestionAcceptedThisTouch) return;
 
-                // Check for suggestion tap before anything else
-                if (isAutoCompletionEnabled && activeSuggestion != null && activeSuggestionRect.contains(e.getX(), e.getY())) {
-                    Log.d("PopEditText", "onLongPress: Long-press on active suggestion. Accepting...");
-                    acceptAutoCompletion();
-                    return; // Consume the event, do not proceed to select text
-                }
-
+                
                 if (movedSinceDown) return;
 
                 // Position calculation
@@ -484,12 +482,7 @@ public class PopEditText extends View {
             public boolean onSingleTapUp(MotionEvent e) {
                 if (suggestionAcceptedThisTouch) return true;
 
-                // Check for suggestion tap before anything else
-                if (isAutoCompletionEnabled && activeSuggestion != null && activeSuggestionRect.contains(e.getX(), e.getY())) {
-                    Log.d("PopEditText", "onSingleTapUp: Tapped on active suggestion. Accepting...");
-                    acceptAutoCompletion();
-                    return true; // Consume the event
-                }
+                
 
                 if (hasSelection) {
                     hasSelection = false;
@@ -523,6 +516,8 @@ public class PopEditText extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+                if (isScaling) return true;
+                if (mJustFinishedScale) return true;
                 if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
                 movedSinceDown = true;
                 scrollY += distanceY;
@@ -603,39 +598,58 @@ public class PopEditText extends View {
 
         scaleGestureDetector = new ScaleGestureDetector(ctx, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
+            public boolean onScaleBegin(ScaleGestureDetector detector) {
+                mJustFinishedScale = false;
+                isScaling = true;
+                lastFocusX = detector.getFocusX();
+                lastFocusY = detector.getFocusY();
+                return true;
+            }
+
+            @Override
             public boolean onScale(ScaleGestureDetector detector) {
                 if (!isZoomEnabled) {
                     return false;
                 }
+
+                float scale = detector.getScaleFactor();
+                float focusX = detector.getFocusX();
+                float focusY = detector.getFocusY();
+
+                // Pan
+                scrollX += lastFocusX - focusX;
+                scrollY += lastFocusY - focusY;
+
+                // Zoom
+                float oldLineHeight = paint.getFontSpacing();
                 float currentSize = paint.getTextSize();
-                float newSize = currentSize * detector.getScaleFactor();
+                float newSize = currentSize * scale;
 
                 newSize = Math.max(MIN_TEXT_SIZE, Math.min(newSize, MAX_TEXT_SIZE));
 
                 if (Math.abs(newSize - currentSize) > 0.1f) {
-                    float oldLineHeight = paint.getFontSpacing();
-                    float focusX = detector.getFocusX();
-                    float focusY = detector.getFocusY();
-
-                    // Determine what point in the document is under the zoom focal point
-                    float docXAtFocus = scrollX + focusX - getTextStartX();
-                    float lineAtFocus = (scrollY + focusY) / oldLineHeight;
-
-                    // Apply the zoom
                     setTextSize(newSize);
-
-                    // Adjust scroll to keep the focal point stationary
                     float newLineHeight = paint.getFontSpacing();
-                    float scale = newSize / currentSize;
+                    float effectiveScaleY = (oldLineHeight > 0) ? newLineHeight / oldLineHeight : 1f;
 
-                    scrollX = (docXAtFocus * scale) - (focusX - getTextStartX());
-                    scrollY = (lineAtFocus * newLineHeight) - focusY;
-
-                    clampScrollX();
-                    clampScrollY();
-                    invalidate(); // Redraw with new scroll and text size
+                    // Adjust scroll to make zoom appear centered on the focal point
+                    scrollX = (scrollX + focusX - getTextStartX()) * scale - (focusX - getTextStartX());
+                    scrollY = (scrollY + focusY) * effectiveScaleY - focusY;
                 }
+
+                lastFocusX = focusX;
+                lastFocusY = focusY;
+
+                clampScrollX();
+                clampScrollY();
+                invalidate();
                 return true;
+            }
+
+            @Override
+            public void onScaleEnd(ScaleGestureDetector detector) {
+                mJustFinishedScale = true;
+                isScaling = false;
             }
         });
 
@@ -703,6 +717,8 @@ public class PopEditText extends View {
             return;
         }
 
+        commitComposing(false);
+
         // Set a flag to ignore subsequent gesture events from this touch sequence.
         suggestionAcceptedThisTouch = true;
 
@@ -714,6 +730,8 @@ public class PopEditText extends View {
         Log.d("PopEditText", "acceptAutoCompletion: Cleared selection flags, inserting text.");
         insertStringAtCursor(textToInsert);
         Log.d("PopEditText", "acceptAutoCompletion: Text inserted.");
+
+        restartInput(); // Force IME to resync
 
         // The flag will be reset by the next onDown event.
     }
@@ -739,11 +757,20 @@ public class PopEditText extends View {
             return;
         }
 
-        // Do not show suggestions if the cursor is in the middle of a word
         String line = getLineTextForRender(cursorLine);
+
+        // Do not show suggestions if the cursor is in the middle of a word
         if (cursorChar < line.length() && Character.isLetterOrDigit(line.charAt(cursorChar))) {
             clearActiveSuggestion();
             return;
+        }
+
+        // Do not show suggestions if there is non-whitespace text after the cursor
+        if (cursorChar < line.length()) {
+            if (!line.substring(cursorChar).trim().isEmpty()) {
+                clearActiveSuggestion();
+                return;
+            }
         }
 
         String wordFragment = getCurrentWordFragment();
@@ -3465,12 +3492,40 @@ private void endLargeEditUi(boolean invalidate) {
                 mainHandler.removeCallbacks(autoScrollRunnable);
                 
                 // --- Check for tap on suggestion FIRST and consume if it's a clean tap ---
-                if (!movedSinceDown && isAutoCompletionEnabled && activeSuggestion != null && !activeSuggestionRect.isEmpty() && activeSuggestionRect.contains(ex, ey)) {
+                float y = event.getY() + scrollY;
+                float x = event.getX() + scrollX - getTextStartX();
+                int line = Math.max(0, (int) (y / lineHeight));
+               
+                // Get line text safely
+                String ln = getLineFromWindowLocal(line - windowStartLine);
+                if (ln == null) ln = getLineTextForRender(line);
+
+                int charIndex = getCharIndexForX(ln, x);
+
+                // Check if the long press was on an "empty" area
+                boolean isEmptyArea = false;
+                if (ln.isEmpty()) {
+                    isEmptyArea = true;
+                } else if (charIndex >= ln.length()) {
+                    isEmptyArea = true; // Tapped on empty space after the text on a line
+                
+                }
+
+                if (!movedSinceDown && isAutoCompletionEnabled && activeSuggestion != null && !activeSuggestionRect.isEmpty()) {
+                	
+                	if (activeSuggestionRect.contains(ex, ey)){
                     Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion tap detected. Calling acceptAutoCompletion.");
                     acceptAutoCompletion(); // Call synchronously
                     pointerDown = false; // Reset pointerDown state
                     Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion accepted, returning true.");
                     return true; // Consume the event, preventing further processing
+                } else if (isEmptyArea && line == cursorLine) {
+                    Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion tap detected. Calling acceptAutoCompletion.");
+                    acceptAutoCompletion(); // Call synchronously
+                    pointerDown = false; // Reset pointerDown state
+                    Log.d("PopEditText", "onTouchEvent.ACTION_UP: Suggestion accepted, returning true.");
+                    return true; // Consume the event, preventing further processing
+                  } 
                 }
                 // --- END Check ---
 
