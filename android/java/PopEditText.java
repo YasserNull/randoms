@@ -516,9 +516,11 @@ public class PopEditText extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-                if (isScaling) return true;
+                if (e2.getPointerCount() > 1) return true;
+                if (isScaling || scaleGestureDetector.isInProgress()) return true;
                 if (mJustFinishedScale) return true;
                 if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
+                
                 movedSinceDown = true;
                 scrollY += distanceY;
                 scrollX += distanceX;
@@ -528,7 +530,8 @@ public class PopEditText extends View {
                 removeCallbacks(delayedWindowCheck);
                 if (Math.abs(distanceY) > lineHeight * 6f) {
                     checkAndLoadWindow();
-                } else {
+                }
+                else {
                     postDelayed(delayedWindowCheck, 60);
                 }
 
@@ -540,7 +543,10 @@ public class PopEditText extends View {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (isScaling || scaleGestureDetector.isInProgress()) return true;
+                if (mJustFinishedScale) return true;
                 if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
+                
                 int startX = Math.round(scrollX);
                 int startY = Math.round(scrollY);
                 int minX = 0;
@@ -615,10 +621,6 @@ public class PopEditText extends View {
                 float scale = detector.getScaleFactor();
                 float focusX = detector.getFocusX();
                 float focusY = detector.getFocusY();
-
-                // Pan
-                scrollX += lastFocusX - focusX;
-                scrollY += lastFocusY - focusY;
 
                 // Zoom
                 float oldLineHeight = paint.getFontSpacing();
