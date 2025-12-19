@@ -174,6 +174,13 @@ public class PopEditText extends View {
     @Nullable private ValueAnimator charAnimAnimator;
     private final Paint charAnimTmpPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // deleted-character fade animation (ghost draw after removal)
+    private int delAnimLine = -1;
+    private int delAnimAtChar = 0;
+    @Nullable private String delAnimText;
+    private float delAnimAlpha = 0f;
+    @Nullable private ValueAnimator delAnimAnimator;
+
     // floating popup (custom)
     private boolean showPopup = false;
     private boolean isMinimalPopup = false;
@@ -1250,7 +1257,16 @@ public class PopEditText extends View {
     }
 
     private void drawHighlightedLine(Canvas canvas, String line, int globalLine, float y) {
-        if (line.isEmpty()) return;
+        if (line.isEmpty()) {
+            if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
+                charAnimTmpPaint.set(paint);
+                charAnimTmpPaint.setUnderlineText(false);
+                int baseAlpha = paint.getAlpha();
+                charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
+                canvas.drawText(delAnimText, 0f, y, charAnimTmpPaint);
+            }
+            return;
+        }
 
         int fadeStart = -1;
         int fadeEnd = -1;
@@ -1267,6 +1283,15 @@ public class PopEditText extends View {
 
         if (highlightRules.isEmpty()) {
             drawTextSegmentWithFade(canvas, line, 0, line.length(), 0f, y, paint, fadeStart, fadeEnd, fadeAlpha);
+            if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
+                int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
+                float x = measureText(line, at, globalLine);
+                charAnimTmpPaint.set(paint);
+                charAnimTmpPaint.setUnderlineText(false);
+                int baseAlpha = paint.getAlpha();
+                charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
+                canvas.drawText(delAnimText, x, y, charAnimTmpPaint);
+            }
             return;
         }
 
@@ -1278,6 +1303,15 @@ public class PopEditText extends View {
 
         if (spans.isEmpty()) {
             drawTextSegmentWithFade(canvas, line, 0, line.length(), 0f, y, paint, fadeStart, fadeEnd, fadeAlpha);
+            if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
+                int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
+                float x = measureText(line, at, globalLine);
+                charAnimTmpPaint.set(paint);
+                charAnimTmpPaint.setUnderlineText(false);
+                int baseAlpha = paint.getAlpha();
+                charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
+                canvas.drawText(delAnimText, x, y, charAnimTmpPaint);
+            }
             return;
         }
 
@@ -1297,6 +1331,23 @@ public class PopEditText extends View {
 
         if (lastEnd < line.length()) {
             drawTextSegmentWithFade(canvas, line, lastEnd, line.length(), currentX, y, paint, fadeStart, fadeEnd, fadeAlpha);
+        }
+
+        if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
+            int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
+            float x = measureText(line, at, globalLine);
+            Paint ghostPaint = paint;
+            for (HighlightSpan span : spans) {
+                if (at >= span.start && at < span.end) {
+                    ghostPaint = span.paint;
+                    break;
+                }
+            }
+            charAnimTmpPaint.set(ghostPaint);
+            charAnimTmpPaint.setUnderlineText(false);
+            int baseAlpha = ghostPaint.getAlpha();
+            charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
+            canvas.drawText(delAnimText, x, y, charAnimTmpPaint);
         }
     }
 
@@ -2229,6 +2280,10 @@ private void endLargeEditUi(boolean invalidate) {
             if (cursorChar > 0) {
                 Float oldWidth = lineWidthCache.get(cursorLine);
                 int safeStart = Math.max(0, cursorChar - 1);
+                if (isCharAnimationEnabled) {
+                    String removed = base.substring(safeStart, Math.min(cursorChar, base.length()));
+                    startDeleteAnimation(cursorLine, safeStart, removed);
+                }
                 String modified = base.substring(0, safeStart) + base.substring(cursorChar);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
@@ -2290,6 +2345,10 @@ private void endLargeEditUi(boolean invalidate) {
 
             if (cursorChar < base.length()) {
                 Float oldWidth = lineWidthCache.get(cursorLine);
+                if (isCharAnimationEnabled) {
+                    String removed = base.substring(cursorChar, Math.min(cursorChar + 1, base.length()));
+                    startDeleteAnimation(cursorLine, cursorChar, removed);
+                }
                 String modified = base.substring(0, cursorChar) + base.substring(cursorChar + 1);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
@@ -2342,6 +2401,25 @@ private void endLargeEditUi(boolean invalidate) {
             if (base == null) base = "";
             int start = Math.max(0, Math.min(composingOffset, base.length()));
             int end = Math.max(0, Math.min(composingOffset + composingLength, base.length()));
+            if (isCharAnimationEnabled) {
+                String oldComposing = base.substring(start, end);
+                String newComposing = (textSeq == null) ? "" : textSeq.toString();
+                if (newComposing.length() < oldComposing.length()) {
+                    String removed = null;
+                    int at = start;
+                    if (oldComposing.startsWith(newComposing)) {
+                        removed = oldComposing.substring(newComposing.length());
+                        at = start + newComposing.length();
+                    } else if (oldComposing.endsWith(newComposing)) {
+                        removed = oldComposing.substring(0, oldComposing.length() - newComposing.length());
+                        at = start;
+                    }
+
+                    if (removed != null && !removed.isEmpty()) {
+                        startDeleteAnimation(composingLine, at, removed);
+                    }
+                }
+            }
             String newLine = base.substring(0, start) + textSeq + base.substring(end);
             updateLocalLine(local, newLine);
             modifiedLines.put(composingLine, newLine);
@@ -3429,6 +3507,12 @@ private void endLargeEditUi(boolean invalidate) {
             charAnimStartChar = 0;
             charAnimEndChar = 0;
             lastComposingTextForCharAnim = null;
+            if (delAnimAnimator != null) delAnimAnimator.cancel();
+            delAnimAnimator = null;
+            delAnimAlpha = 0f;
+            delAnimLine = -1;
+            delAnimAtChar = 0;
+            delAnimText = null;
             invalidate();
         }
     }
@@ -3458,6 +3542,7 @@ private void endLargeEditUi(boolean invalidate) {
 
         final int finalCharCount = extractedCharCount;
         Runnable start = () -> {
+            if (delAnimAnimator != null) delAnimAnimator.cancel();
             if (charAnimAnimator != null) charAnimAnimator.cancel();
             charAnimLine = targetLine;
             charAnimEndChar = Math.max(0, targetEndChar);
@@ -3487,6 +3572,54 @@ private void endLargeEditUi(boolean invalidate) {
             });
             charAnimAnimator.start();
         };
+        if (Looper.myLooper() == Looper.getMainLooper()) start.run();
+        else post(start);
+    }
+
+    private void startDeleteAnimation(int targetLine, int atChar, @Nullable String removedText) {
+        if (!isCharAnimationEnabled) return;
+        if (removedText == null || removedText.isEmpty()) return;
+
+        final int lineForAnim = targetLine;
+        final int atForAnim = Math.max(0, atChar);
+        final String textForAnim = removedText;
+
+        Runnable start = () -> {
+            if (charAnimAnimator != null) charAnimAnimator.cancel();
+            if (delAnimAnimator != null) delAnimAnimator.cancel();
+            delAnimLine = lineForAnim;
+            delAnimAtChar = atForAnim;
+            delAnimText = textForAnim;
+            delAnimAlpha = 1f;
+            invalidateLineGlobal(lineForAnim);
+
+            delAnimAnimator = ValueAnimator.ofFloat(1f, 0f);
+            delAnimAnimator.setDuration(Math.max(1, charAnimationDurationMs));
+            delAnimAnimator.addUpdateListener(a -> {
+                Object v = a.getAnimatedValue();
+                delAnimAlpha = (v instanceof Float) ? (Float) v : 0f;
+                invalidateLineGlobal(lineForAnim);
+            });
+            delAnimAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator animation) {
+                    delAnimAlpha = 0f;
+                    delAnimLine = -1;
+                    delAnimAtChar = 0;
+                    delAnimText = null;
+                    invalidate();
+                }
+
+                @Override public void onAnimationCancel(Animator animation) {
+                    delAnimAlpha = 0f;
+                    delAnimLine = -1;
+                    delAnimAtChar = 0;
+                    delAnimText = null;
+                    invalidate();
+                }
+            });
+            delAnimAnimator.start();
+        };
+
         if (Looper.myLooper() == Looper.getMainLooper()) start.run();
         else post(start);
     }
@@ -4201,6 +4334,7 @@ private String getLineTextForRenderWithDirect(int line, @Nullable java.util.Map<
     public void release() {
         cancelAndCloseReader();
         if (charAnimAnimator != null) charAnimAnimator.cancel();
+        if (delAnimAnimator != null) delAnimAnimator.cancel();
         ioThread.quitSafely();
     }
 } 
