@@ -1,5 +1,7 @@
 package com.yn.tests.popedittext;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -160,6 +162,17 @@ public class PopEditText extends View {
     // keyboard awareness
     private final Rect visibleDisplayFrame = new Rect();
     private int keyboardHeight = 0;
+
+    // typed-character fade animation (in-text, while drawing)
+    private boolean isCharAnimationEnabled = true;
+    private int charAnimationDurationMs = 200;
+    @Nullable private String lastComposingTextForCharAnim;
+    private int charAnimLine = -1;
+    private int charAnimStartChar = 0;
+    private int charAnimEndChar = 0;
+    private float charAnimAlpha = 0f;
+    @Nullable private ValueAnimator charAnimAnimator;
+    private final Paint charAnimTmpPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // floating popup (custom)
     private boolean showPopup = false;
@@ -1237,8 +1250,23 @@ public class PopEditText extends View {
     }
 
     private void drawHighlightedLine(Canvas canvas, String line, int globalLine, float y) {
-        if (highlightRules.isEmpty() || line.isEmpty()) {
-            canvas.drawText(line, 0, y, paint);
+        if (line.isEmpty()) return;
+
+        int fadeStart = -1;
+        int fadeEnd = -1;
+        float fadeAlpha = 1f;
+        if (isCharAnimationEnabled && globalLine == charAnimLine && charAnimEndChar > charAnimStartChar && charAnimAlpha < 1f) {
+            fadeStart = Math.max(0, Math.min(charAnimStartChar, line.length()));
+            fadeEnd = Math.max(0, Math.min(charAnimEndChar, line.length()));
+            fadeAlpha = Math.max(0f, Math.min(1f, charAnimAlpha));
+            if (fadeEnd <= fadeStart) {
+                fadeStart = -1;
+                fadeEnd = -1;
+            }
+        }
+
+        if (highlightRules.isEmpty()) {
+            drawTextSegmentWithFade(canvas, line, 0, line.length(), 0f, y, paint, fadeStart, fadeEnd, fadeAlpha);
             return;
         }
 
@@ -1249,35 +1277,73 @@ public class PopEditText extends View {
         }
 
         if (spans.isEmpty()) {
-            canvas.drawText(line, 0, y, paint);
+            drawTextSegmentWithFade(canvas, line, 0, line.length(), 0f, y, paint, fadeStart, fadeEnd, fadeAlpha);
             return;
         }
 
-        float currentX = 0;
+        float currentX = 0f;
         int lastEnd = 0;
 
         for (HighlightSpan span : spans) {
-            if (span.start < lastEnd) {
-                continue; // Skip overlapping spans that start before the last one ended
-            }
+            if (span.start < lastEnd) continue;
 
-            // Draw text before the span
             if (span.start > lastEnd) {
-                canvas.drawText(line, lastEnd, span.start, currentX, y, paint);
-                currentX += paint.measureText(line, lastEnd, span.start);
+                currentX += drawTextSegmentWithFade(canvas, line, lastEnd, span.start, currentX, y, paint, fadeStart, fadeEnd, fadeAlpha);
             }
 
-            // Draw the highlighted span
-            canvas.drawText(line, span.start, span.end, currentX, y, span.paint);
-            currentX += span.paint.measureText(line, span.start, span.end);
-
+            currentX += drawTextSegmentWithFade(canvas, line, span.start, span.end, currentX, y, span.paint, fadeStart, fadeEnd, fadeAlpha);
             lastEnd = span.end;
         }
 
-        // Draw remaining text after the last span
         if (lastEnd < line.length()) {
-            canvas.drawText(line, lastEnd, line.length(), currentX, y, paint);
+            drawTextSegmentWithFade(canvas, line, lastEnd, line.length(), currentX, y, paint, fadeStart, fadeEnd, fadeAlpha);
         }
+    }
+
+    private float drawTextSegmentWithFade(
+            Canvas canvas,
+            String line,
+            int start,
+            int end,
+            float x,
+            float y,
+            Paint segmentPaint,
+            int fadeStart,
+            int fadeEnd,
+            float fadeAlpha
+    ) {
+        if (start >= end) return 0f;
+        boolean hasFade = fadeStart >= 0 && fadeEnd > fadeStart && fadeAlpha < 1f;
+        if (!hasFade || end <= fadeStart || start >= fadeEnd) {
+            canvas.drawText(line, start, end, x, y, segmentPaint);
+            return segmentPaint.measureText(line, start, end);
+        }
+
+        float currentX = x;
+
+        int beforeEnd = Math.min(end, fadeStart);
+        if (start < beforeEnd) {
+            canvas.drawText(line, start, beforeEnd, currentX, y, segmentPaint);
+            currentX += segmentPaint.measureText(line, start, beforeEnd);
+        }
+
+        int fadeSegStart = Math.max(start, fadeStart);
+        int fadeSegEnd = Math.min(end, fadeEnd);
+        if (fadeSegStart < fadeSegEnd) {
+            charAnimTmpPaint.set(segmentPaint);
+            int baseAlpha = segmentPaint.getAlpha();
+            charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, fadeAlpha))));
+            canvas.drawText(line, fadeSegStart, fadeSegEnd, currentX, y, charAnimTmpPaint);
+            currentX += segmentPaint.measureText(line, fadeSegStart, fadeSegEnd);
+        }
+
+        int afterStart = Math.max(start, fadeEnd);
+        if (afterStart < end) {
+            canvas.drawText(line, afterStart, end, currentX, y, segmentPaint);
+            currentX += segmentPaint.measureText(line, afterStart, end);
+        }
+
+        return currentX - x;
     }
 
     private List<HighlightSpan> calculateSpansForLine(String line) {
@@ -2256,6 +2322,7 @@ private void endLargeEditUi(boolean invalidate) {
         if (!hasComposing) return;
         hasComposing = false;
         composingLength = 0;
+        lastComposingTextForCharAnim = null;
         invalidate();
         updateSuggestion();
     }
@@ -2293,6 +2360,7 @@ private void endLargeEditUi(boolean invalidate) {
         replaceComposingWith("");
         hasComposing = false;
         composingLength = 0;
+        lastComposingTextForCharAnim = null;
     }
 
     private int comparePos(int lineA, int charA, int lineB, int charB) {
@@ -3350,6 +3418,79 @@ private void endLargeEditUi(boolean invalidate) {
         if (imm != null) imm.showSoftInput(this, 0);
     }
 
+    public void setCharAnimation(boolean enabled, int durationMs) {
+        isCharAnimationEnabled = enabled;
+        if (durationMs > 0) charAnimationDurationMs = durationMs;
+        if (!enabled) {
+            if (charAnimAnimator != null) charAnimAnimator.cancel();
+            charAnimAnimator = null;
+            charAnimAlpha = 0f;
+            charAnimLine = -1;
+            charAnimStartChar = 0;
+            charAnimEndChar = 0;
+            lastComposingTextForCharAnim = null;
+            invalidate();
+        }
+    }
+
+    private void startCharAnimationFromText(CharSequence committedText) {
+        if (!isCharAnimationEnabled) return;
+        if (committedText == null) return;
+
+        final int targetLine = cursorLine;
+        final int targetEndChar = cursorChar;
+
+        int extractedCodePoint = -1;
+        int extractedCharCount = 0;
+        int i = committedText.length();
+        while (i > 0) {
+            int codePoint = Character.codePointBefore(committedText, i);
+            i -= Character.charCount(codePoint);
+
+            if (codePoint == '\n' || codePoint == '\r') continue;
+            if (Character.isWhitespace(codePoint)) continue;
+
+            extractedCodePoint = codePoint;
+            extractedCharCount = Character.charCount(codePoint);
+            break;
+        }
+        if (extractedCodePoint == -1) return;
+
+        final int finalCharCount = extractedCharCount;
+        Runnable start = () -> {
+            if (charAnimAnimator != null) charAnimAnimator.cancel();
+            charAnimLine = targetLine;
+            charAnimEndChar = Math.max(0, targetEndChar);
+            charAnimStartChar = Math.max(0, charAnimEndChar - finalCharCount);
+            charAnimAlpha = 0.2f;
+            invalidateLineGlobal(charAnimLine); // draw immediately
+
+            charAnimAnimator = ValueAnimator.ofFloat(0.2f, 1f);
+            charAnimAnimator.setDuration(Math.max(1, charAnimationDurationMs));
+            charAnimAnimator.addUpdateListener(a -> {
+                Object v = a.getAnimatedValue();
+                charAnimAlpha = (v instanceof Float) ? (Float) v : 0f;
+                invalidateLineGlobal(charAnimLine);
+            });
+            charAnimAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator animation) {
+                    charAnimAlpha = 0f;
+                    charAnimLine = -1;
+                    invalidate();
+                }
+
+                @Override public void onAnimationCancel(Animator animation) {
+                    charAnimAlpha = 0f;
+                    charAnimLine = -1;
+                    invalidate();
+                }
+            });
+            charAnimAnimator.start();
+        };
+        if (Looper.myLooper() == Looper.getMainLooper()) start.run();
+        else post(start);
+    }
+
     @Override
     public boolean onCheckIsTextEditor() {
         return !isDisabled;
@@ -3371,6 +3512,7 @@ private void endLargeEditUi(boolean invalidate) {
                 if (hasSelection) {
                     replaceSelectionWithText(text.toString());
                     commitComposing(true);
+                    startCharAnimationFromText(text);
                     updateSuggestion();
                     return true;
                 }
@@ -3378,12 +3520,14 @@ private void endLargeEditUi(boolean invalidate) {
                 if (hasComposing) {
                     replaceComposingWith(text);
                     commitComposing(true);
+                    startCharAnimationFromText(text);
                     updateSuggestion();
                     return true;
                 }
 
                 insertTextAtCursor(text.toString());
                 commitComposing(true);
+                startCharAnimationFromText(text);
                 updateSuggestion();
                 return true;
             }
@@ -3394,6 +3538,7 @@ private void endLargeEditUi(boolean invalidate) {
 
                 if (hasSelection) {
                     replaceSelectionWithText(text.toString());
+                    startCharAnimationFromText(text);
                     updateSuggestion();
                     return true;
                 }
@@ -3402,7 +3547,12 @@ private void endLargeEditUi(boolean invalidate) {
                 if (!hasComposing) {
                     composingLine = cursorLine; composingOffset = cursorChar; composingLength = 0; hasComposing = true;
                 }
-                replaceComposingWith(text);
+                String newText = text.toString();
+                String oldText = (lastComposingTextForCharAnim == null) ? "" : lastComposingTextForCharAnim;
+                boolean shouldAnim = newText.length() >= oldText.length() && !newText.equals(oldText);
+                replaceComposingWith(newText);
+                lastComposingTextForCharAnim = newText;
+                if (shouldAnim) startCharAnimationFromText(newText);
                 updateSuggestion();
                 return true;
             }
@@ -3611,7 +3761,9 @@ private void endLargeEditUi(boolean invalidate) {
         if (hasSelection && event.isPrintingKey()) {
             int uc = event.getUnicodeChar();
             if (uc != 0) {
-                replaceSelectionWithText(String.valueOf((char) uc));
+                String s = String.valueOf((char) uc);
+                replaceSelectionWithText(s);
+                startCharAnimationFromText(s);
             } else {
                 replaceSelectionWithText("");
             }
@@ -4048,6 +4200,7 @@ private String getLineTextForRenderWithDirect(int line, @Nullable java.util.Map<
 
     public void release() {
         cancelAndCloseReader();
+        if (charAnimAnimator != null) charAnimAnimator.cancel();
         ioThread.quitSafely();
     }
 } 
