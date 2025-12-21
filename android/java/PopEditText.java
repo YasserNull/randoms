@@ -146,6 +146,8 @@ public class PopEditText extends View {
     private boolean selecting = false;
     private boolean isSelectAllActive = false;
     private boolean isEntireFileSelected = false; // Track if the entire file is logically selected
+    private boolean isLineNumberSelecting = false;
+    private int lineNumberSelectAnchorLine = -1;
 
     // touch helpers
     private boolean pointerDown = false;
@@ -178,6 +180,7 @@ public class PopEditText extends View {
     private int delAnimLine = -1;
     private int delAnimAtChar = 0;
     @Nullable private String delAnimText;
+    @Nullable private Paint delAnimPaint;
     private float delAnimAlpha = 0f;
     @Nullable private ValueAnimator delAnimAnimator;
 
@@ -204,9 +207,17 @@ public class PopEditText extends View {
     private float cursorWidth = 6f;
     private int selectionHighlightColor = 0x8033B5E5;
     private int cursorAndHandlesColor = 0xFF2196F3;
+    private boolean isBracketMatchingEnabled = true;
+    private final Paint bracketMatchPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float bracketMatchStrokeWidth = 2f;
+    private boolean isBracketGuidesEnabled = false;
+    private final Paint bracketGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float bracketGuideStrokeWidth = 2f;
 
     // --- Current Line Highlight State ---
     private boolean highlightCurrentLine = true;
+    private boolean isClickAfterEndToAddLineEnabled = false;
+    private boolean isAutoPairingEnabled = false;
     private int currentLineHighlightColor = 0x202196F3; // Default: translucent gray (more visible)
     private int currentLineNumberColor = 0xFF2196F3; // Default: same as cursor/handles color
     private final Paint currentLinePaint = new Paint();
@@ -255,6 +266,8 @@ public class PopEditText extends View {
 
     // --- Syntax Highlighting State ---
     private final List<HighlightRule> highlightRules = new ArrayList<>();
+    private HighlightRule stringHighlightRule;
+    private HighlightRule blockCommentHighlightRule;
     private final LinkedHashMap<Integer, List<HighlightSpan>> highlightCache =
         new LinkedHashMap<Integer, List<HighlightSpan>>(1000, 0.75f, true) {
             @Override
@@ -262,6 +275,23 @@ public class PopEditText extends View {
                 return size() > 1000;
             }
         };
+    private final LinkedHashMap<Integer, Boolean> blockCommentEndStateCache =
+        new LinkedHashMap<Integer, Boolean>(1000, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Integer, Boolean> eldest) {
+                return size() > 1000;
+            }
+        };
+    private final LinkedHashMap<Integer, Integer> stringEndStateCache =
+        new LinkedHashMap<Integer, Integer>(1000, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+                return size() > 1000;
+            }
+        };
+
+    public static final String RULE_STRING = "__STRING__";
+    public static final String RULE_BLOCK_COMMENT = "__BLOCK_COMMENT__";
 
     // --- Auto-completion State ---
     private boolean isAutoCompletionEnabled = false;
@@ -342,18 +372,101 @@ public class PopEditText extends View {
         }
     }
 
+    private static class LineParseResult {
+        final List<HighlightSpan> spans;
+        final boolean endsInBlockComment;
+        final int endsInStringState;
+        LineParseResult(List<HighlightSpan> spans, boolean endsInBlockComment, int endsInStringState) {
+            this.spans = spans;
+            this.endsInBlockComment = endsInBlockComment;
+            this.endsInStringState = endsInStringState;
+        }
+    }
+
+    private static class HighlightLineState {
+        final boolean inBlockComment;
+        final int stringState;
+        HighlightLineState(boolean inBlockComment, int stringState) {
+            this.inBlockComment = inBlockComment;
+            this.stringState = stringState;
+        }
+    }
+
+    private static class BracketMatch {
+        final int openLine;
+        final int openChar;
+        final int closeLine;
+        final int closeChar;
+        BracketMatch(int openLine, int openChar, int closeLine, int closeChar) {
+            this.openLine = openLine;
+            this.openChar = openChar;
+            this.closeLine = closeLine;
+            this.closeChar = closeChar;
+        }
+    }
+
+    private static class BracketToken {
+        final int line;
+        final int ch;
+        final char bracket;
+        BracketToken(int line, int ch, char bracket) {
+            this.line = line;
+            this.ch = ch;
+            this.bracket = bracket;
+        }
+    }
+
+    private static class BracketGuideState {
+        boolean inBlockComment;
+        int stringState;
+        final java.util.ArrayDeque<BracketGuideToken> stack = new java.util.ArrayDeque<>();
+        BracketGuideState(boolean inBlockComment, int stringState) {
+            this.inBlockComment = inBlockComment;
+            this.stringState = stringState;
+        }
+    }
+
+    private static class BracketGuideToken {
+        final int column;
+        final float x;
+        BracketGuideToken(int column, float x) {
+            this.column = column;
+            this.x = x;
+        }
+    }
+
+    private enum HighlightRuleType {
+        REGEX,
+        STRING,
+        BLOCK_COMMENT
+    }
+
     private static class HighlightRule {
+        final HighlightRuleType type;
         final Pattern pattern;
         final Paint paint;
         final int style;
         final boolean underline;
 
-        HighlightRule(String regex, int style, int color, float baseTextSize, Typeface baseTypeface, boolean underline) {
-            // Handle comments regex gracefully
-            if (regex.equals("//*|#*")) {
-                regex = "(//|#).*";
+        HighlightRule(
+                String regex,
+                int style,
+                int color,
+                float baseTextSize,
+                Typeface baseTypeface,
+                boolean underline,
+                HighlightRuleType type
+        ) {
+            this.type = type;
+            if (type == HighlightRuleType.REGEX) {
+                // Handle comments regex gracefully
+                if (regex.equals("//*|#*")) {
+                    regex = "(//|#).*";
+                }
+                this.pattern = Pattern.compile(regex);
+            } else {
+                this.pattern = null;
             }
-            this.pattern = Pattern.compile(regex);
             this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
             this.paint.setColor(color);
             this.paint.setTextSize(baseTextSize);
@@ -380,6 +493,10 @@ public class PopEditText extends View {
 
     // --- Color Code Highlighting ---
     private boolean isColorHighlightingEnabled = false;
+    private boolean isMultiLineStringsEnabled = true;
+    private boolean isBacktickStringsEnabled = true;
+    private boolean isBlockCommentsEnabled = true;
+    private boolean isTripleQuoteStringsEnabled = true;
     private final Paint colorOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Pattern COLOR_HEX_PATTERN = Pattern.compile(
         "(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))\\b|(\\b0x[a-fA-F0-9]{6,8}\\b)",
@@ -403,6 +520,12 @@ public class PopEditText extends View {
         paint.setHinting(Paint.HINTING_ON);
         paint.setUnderlineText(false); // Explicitly disable underlines to fix visual artifact
         lineHeight = paint.getFontSpacing();
+        bracketMatchPaint.setColor(cursorAndHandlesColor);
+        bracketMatchPaint.setStyle(Paint.Style.STROKE);
+        bracketMatchPaint.setStrokeWidth(bracketMatchStrokeWidth);
+        bracketGuidePaint.setColor(0xFF888888);
+        bracketGuidePaint.setStyle(Paint.Style.STROKE);
+        bracketGuidePaint.setStrokeWidth(bracketGuideStrokeWidth);
 
         // Initialization for line numbers
         lineNumbersPaint.setTextAlign(Paint.Align.RIGHT);
@@ -447,6 +570,13 @@ public class PopEditText extends View {
 
                 
                 if (movedSinceDown) return;
+
+                if (isInLineNumberGutter(e.getX())) {
+                    float y = e.getY() + scrollY;
+                    int line = Math.max(0, (int) (y / lineHeight));
+                    beginLineNumberSelection(line);
+                    return;
+                }
 
                 // Position calculation
                 float y = e.getY() + scrollY;
@@ -514,9 +644,25 @@ public class PopEditText extends View {
                 int line = Math.max(0, (int) (y / lineHeight));
 
                 if (isEof && line >= windowStartLine + linesWindow.size() && !linesWindow.isEmpty()) {
-                    cursorLine = windowStartLine + linesWindow.size() - 1;
-                    String lastLineText = getLineTextForRender(cursorLine);
-                    cursorChar = lastLineText.length();
+                    if (isClickAfterEndToAddLineEnabled) {
+                        int lastLineIndex = windowStartLine + linesWindow.size() - 1;
+                        // Only add a new line if the user taps exactly on the first empty line after the text
+                        if (line == lastLineIndex + 1) {
+                            cursorLine = lastLineIndex;
+                            String lastLineText = getLineTextForRender(cursorLine);
+                            cursorChar = lastLineText.length();
+                            insertTextAtCursor("\n");
+                        } else {
+                            // If tapped further down, just move cursor to end of text without adding lines
+                            cursorLine = lastLineIndex;
+                            String lastLineText = getLineTextForRender(cursorLine);
+                            cursorChar = lastLineText.length();
+                        }
+                    } else {
+                        cursorLine = windowStartLine + linesWindow.size() - 1;
+                        String lastLineText = getLineTextForRender(cursorLine);
+                        cursorChar = lastLineText.length();
+                    }
                 } else {
                     ensureLineInWindow(line, true);
                     String ln = getLineTextForRender(line);
@@ -531,6 +677,7 @@ public class PopEditText extends View {
                 resetCursorBlink();
                 showKeyboard();
                 restartInput();
+                updateSuggestion();
                 return true;
             }
 
@@ -781,6 +928,19 @@ public class PopEditText extends View {
 
         String line = getLineTextForRender(cursorLine);
 
+        // Prevent suggestions inside syntax highlighting
+        List<HighlightSpan> spans = highlightCache.get(cursorLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line, cursorLine);
+            highlightCache.put(cursorLine, spans);
+        }
+        for (HighlightSpan span : spans) {
+            if (cursorChar > span.start && cursorChar <= span.end) {
+                clearActiveSuggestion();
+                return;
+            }
+        }
+
         // Do not show suggestions if the cursor is in the middle of a word
         if (cursorChar < line.length() && Character.isLetterOrDigit(line.charAt(cursorChar))) {
             clearActiveSuggestion();
@@ -853,7 +1013,7 @@ public class PopEditText extends View {
             String modified = base.substring(0, pos) + text + base.substring(pos);
             updateLocalLine(localIdx, modified);
             modifiedLines.put(cursorLine, modified);
-            highlightCache.remove(cursorLine);
+            invalidateHighlightCacheForLine(cursorLine);
             cursorChar += text.length();
             computeWidthForLine(cursorLine, modified);
             recalculateMaxLineWidth();
@@ -893,6 +1053,42 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setBracketMatchingEnabled(boolean enabled) {
+        if (this.isBracketMatchingEnabled == enabled) return;
+        this.isBracketMatchingEnabled = enabled;
+        invalidate();
+    }
+
+    public void setBracketMatchColor(int color) {
+        bracketMatchPaint.setColor(color);
+        invalidate();
+    }
+
+    public void setBracketMatchStrokeWidth(float width) {
+        if (this.bracketMatchStrokeWidth == width) return;
+        this.bracketMatchStrokeWidth = width;
+        bracketMatchPaint.setStrokeWidth(width);
+        invalidate();
+    }
+
+    public void setBracketGuidesEnabled(boolean enabled) {
+        if (this.isBracketGuidesEnabled == enabled) return;
+        this.isBracketGuidesEnabled = enabled;
+        invalidate();
+    }
+
+    public void setBracketGuidesColor(int color) {
+        bracketGuidePaint.setColor(color);
+        invalidate();
+    }
+
+    public void setBracketGuidesStrokeWidth(float width) {
+        if (this.bracketGuideStrokeWidth == width) return;
+        this.bracketGuideStrokeWidth = width;
+        bracketGuidePaint.setStrokeWidth(width);
+        invalidate();
+    }
+
     public void setCursorWidth(float width) {
         if (this.cursorWidth == width) return;
         this.cursorWidth = width;
@@ -903,6 +1099,14 @@ public class PopEditText extends View {
         if (this.highlightCurrentLine == enabled) return;
         this.highlightCurrentLine = enabled;
         invalidate();
+    }
+
+    public void setClickAfterEndToAddLineEnabled(boolean enabled) {
+        this.isClickAfterEndToAddLineEnabled = enabled;
+    }
+
+    public void setAutoPairingEnabled(boolean enabled) {
+        this.isAutoPairingEnabled = enabled;
     }
 
     public void setCurrentLineHighlightColor(int color) {
@@ -929,20 +1133,102 @@ public class PopEditText extends View {
     }
 
     public void addHighlightRule(String regex, int style, int color, boolean underline) {
-        highlightRules.add(new HighlightRule(regex, style, color, paint.getTextSize(), paint.getTypeface(), underline));
-        highlightCache.clear();
+        HighlightRuleType type = HighlightRuleType.REGEX;
+        if (RULE_STRING.equals(regex)) {
+            type = HighlightRuleType.STRING;
+        } else if (RULE_BLOCK_COMMENT.equals(regex)) {
+            type = HighlightRuleType.BLOCK_COMMENT;
+        }
+        HighlightRule rule = new HighlightRule(regex, style, color, paint.getTextSize(), paint.getTypeface(), underline, type);
+        highlightRules.add(rule);
+        if (type == HighlightRuleType.STRING) {
+            stringHighlightRule = rule;
+        } else if (type == HighlightRuleType.BLOCK_COMMENT) {
+            blockCommentHighlightRule = rule;
+        }
+        clearHighlightCaches();
         invalidate();
     }
 
     public void clearHighlightRules() {
         highlightRules.clear();
-        highlightCache.clear();
+        stringHighlightRule = null;
+        blockCommentHighlightRule = null;
+        clearHighlightCaches();
         invalidate();
+    }
+
+    private void clearHighlightCaches() {
+        highlightCache.clear();
+        blockCommentEndStateCache.clear();
+        stringEndStateCache.clear();
+    }
+
+    private void invalidateHighlightCacheForLine(int line) {
+        highlightCache.remove(line);
+        blockCommentEndStateCache.clear();
+        stringEndStateCache.clear();
     }
 
     public void setColorHighlightingEnabled(boolean enabled) {
         if (isColorHighlightingEnabled == enabled) return;
         isColorHighlightingEnabled = enabled;
+        invalidate();
+    }
+
+    public void setMultiLineStringsEnabled(boolean enabled) {
+        if (isMultiLineStringsEnabled == enabled) return;
+        isMultiLineStringsEnabled = enabled;
+        clearHighlightCaches();
+        invalidate();
+    }
+
+    public void setMultiLineStringsHighlight(boolean enabled, int color) {
+        if (stringHighlightRule == null) {
+            addHighlightRule(RULE_STRING, STYLE_NORMAL, color);
+        }
+        if (stringHighlightRule != null) {
+            stringHighlightRule.paint.setColor(color);
+        }
+        setMultiLineStringsEnabled(enabled);
+    }
+
+    public void setMultiLineStringsHighlite(boolean enabled, int color) {
+        setMultiLineStringsHighlight(enabled, color);
+    }
+
+    public void setBacktickStringsEnabled(boolean enabled) {
+        if (isBacktickStringsEnabled == enabled) return;
+        isBacktickStringsEnabled = enabled;
+        clearHighlightCaches();
+        invalidate();
+    }
+
+    public void setBlockCommentsEnabled(boolean enabled) {
+        if (isBlockCommentsEnabled == enabled) return;
+        isBlockCommentsEnabled = enabled;
+        clearHighlightCaches();
+        invalidate();
+    }
+
+    public void setMultiLineCommentsHighlight(boolean enabled, int color) {
+        if (blockCommentHighlightRule == null) {
+            addHighlightRule(RULE_BLOCK_COMMENT, STYLE_ITALIC, color);
+        }
+        if (blockCommentHighlightRule != null) {
+            blockCommentHighlightRule.paint.setColor(color);
+        }
+        setBlockCommentsEnabled(enabled);
+    }
+
+    public void setMultiLineCommentsHighlite(boolean enabled, int color) {
+        setMultiLineCommentsHighlight(enabled, color);
+    }
+
+    public void setTripleQuoteStringsEnabled(boolean enabled) {
+        if (isTripleQuoteStringsEnabled == enabled) return;
+        isTripleQuoteStringsEnabled = enabled;
+        clearHighlightCaches();
         invalidate();
     }
 
@@ -969,7 +1255,7 @@ public class PopEditText extends View {
         for (HighlightRule rule : highlightRules) {
             rule.updateTextSize(size);
         }
-        highlightCache.clear();
+        clearHighlightCaches();
 
         // Invalidate caches and approximate new max width
         synchronized (lineWidthCache) {
@@ -1012,6 +1298,70 @@ public class PopEditText extends View {
     
     private float getGutterStartX() {
         return isRtl ? getWidth() - lineNumbersGutterWidth : 0;
+    }
+
+    private boolean isInLineNumberGutter(float x) {
+        if (!showLineNumbers || lineNumbersGutterWidth <= 0f) return false;
+        float start = getGutterStartX();
+        return x >= start && x <= start + lineNumbersGutterWidth;
+    }
+
+    private int clampLineForSelection(int line) {
+        if (line < 0) return 0;
+        if (isEof) {
+            int last = windowStartLine + linesWindow.size() - 1;
+            if (last < 0) return 0;
+            return Math.min(line, last);
+        }
+        return line;
+    }
+
+    private boolean isLineSelectable(int line) {
+        ensureLineInWindow(line, true);
+        String ln = getLineTextForRender(line);
+        return ln != null && ln.length() > 0;
+    }
+
+    private void beginLineNumberSelection(int line) {
+        int clamped = clampLineForSelection(line);
+        if (!isLineSelectable(clamped)) return;
+        clearActiveSuggestion();
+        isLineNumberSelecting = true;
+        lineNumberSelectAnchorLine = clamped;
+        hasSelection = true;
+        selecting = true;
+        isSelectAllActive = false;
+        isEntireFileSelected = false;
+        String lineText = getLineTextForRender(clamped);
+        selStartLine = clamped;
+        selStartChar = 0;
+        selEndLine = clamped;
+        selEndChar = lineText.length();
+        cursorLine = clamped;
+        cursorChar = selEndChar;
+        hidePopup();
+        resetCursorBlink();
+        invalidate();
+    }
+
+    private void updateLineNumberSelection(int line) {
+        if (!isLineNumberSelecting) return;
+        int clamped = clampLineForSelection(line);
+        if (!isLineSelectable(clamped)) return;
+        int startLine = Math.min(lineNumberSelectAnchorLine, clamped);
+        int endLine = Math.max(lineNumberSelectAnchorLine, clamped);
+        ensureLineInWindow(endLine, true);
+        String endLineText = getLineTextForRender(endLine);
+        selStartLine = startLine;
+        selStartChar = 0;
+        selEndLine = endLine;
+        selEndChar = endLineText.length();
+        cursorLine = endLine;
+        cursorChar = selEndChar;
+        hasSelection = true;
+        selecting = true;
+        hidePopup();
+        invalidate();
     }
 
 
@@ -1135,6 +1485,27 @@ public class PopEditText extends View {
             }
         }
 
+        BracketMatch bracketMatch = null;
+        if (isBracketMatchingEnabled) {
+            bracketMatch = findBracketMatchInVisible(firstVisibleLine, lastVisibleLine, directLines);
+        }
+
+        BracketGuideState bracketGuideState = null;
+        if (isBracketGuidesEnabled) {
+            HighlightLineState guideStart = getLineStateAtStart(firstVisibleLine);
+            boolean guideBlock = guideStart.inBlockComment && isBlockCommentsEnabled;
+            int guideString = guideStart.stringState;
+            if (!isBlockCommentsEnabled) guideBlock = false;
+            if (!isMultiLineStringsEnabled && guideString != STRING_STATE_TRIPLE) guideString = 0;
+            if (!isBacktickStringsEnabled && guideString == STRING_STATE_BACKTICK) guideString = 0;
+            if (!isTripleQuoteStringsEnabled && guideString == STRING_STATE_TRIPLE) guideString = 0;
+            bracketGuideState = new BracketGuideState(guideBlock, guideString);
+            for (int line = windowStartLine; line < firstVisibleLine; line++) {
+                String seedLine = getLineTextForRenderWithDirect(line, directLines);
+                advanceBracketGuideStateForLine(seedLine, line, bracketGuideState);
+            }
+        }
+
         for (int globalLine = firstVisibleLine; globalLine <= lastVisibleLine; globalLine++) {
             String line = getLineTextForRenderWithDirect(globalLine, directLines);
 
@@ -1197,6 +1568,13 @@ public class PopEditText extends View {
 
             // Draw auto-completion suggestion
             drawAutoSuggestion(canvas, line, globalLine, y);
+
+            if (bracketGuideState != null) {
+                List<BracketGuideToken> guideTokens = updateBracketGuideStateForLine(line, globalLine, bracketGuideState);
+                drawBracketGuidesForLine(canvas, line, globalLine, guideTokens);
+            }
+
+            drawBracketMatchForLine(canvas, line, globalLine, bracketMatch);
         }
 
         if (isFocused() && !hasSelection) {
@@ -1256,12 +1634,27 @@ public class PopEditText extends View {
         }
     }
 
+    private Paint getPaintForChar(int lineIndex, int charIndex, String lineText) {
+        List<HighlightSpan> spans = highlightCache.get(lineIndex);
+        if (spans == null) {
+            spans = calculateSpansForLine(lineText, lineIndex);
+            highlightCache.put(lineIndex, spans);
+        }
+        for (HighlightSpan span : spans) {
+            if (charIndex >= span.start && charIndex < span.end) {
+                return span.paint;
+            }
+        }
+        return paint;
+    }
+
     private void drawHighlightedLine(Canvas canvas, String line, int globalLine, float y) {
         if (line.isEmpty()) {
             if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
-                charAnimTmpPaint.set(paint);
+                Paint ghostPaint = (delAnimPaint != null) ? delAnimPaint : paint;
+                charAnimTmpPaint.set(ghostPaint);
                 charAnimTmpPaint.setUnderlineText(false);
-                int baseAlpha = paint.getAlpha();
+                int baseAlpha = ghostPaint.getAlpha();
                 charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
                 canvas.drawText(delAnimText, 0f, y, charAnimTmpPaint);
             }
@@ -1286,9 +1679,10 @@ public class PopEditText extends View {
             if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
                 int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
                 float x = measureText(line, at, globalLine);
-                charAnimTmpPaint.set(paint);
+                Paint ghostPaint = (delAnimPaint != null) ? delAnimPaint : paint;
+                charAnimTmpPaint.set(ghostPaint);
                 charAnimTmpPaint.setUnderlineText(false);
-                int baseAlpha = paint.getAlpha();
+                int baseAlpha = ghostPaint.getAlpha();
                 charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
                 canvas.drawText(delAnimText, x, y, charAnimTmpPaint);
             }
@@ -1297,7 +1691,7 @@ public class PopEditText extends View {
 
         List<HighlightSpan> spans = highlightCache.get(globalLine);
         if (spans == null) {
-            spans = calculateSpansForLine(line);
+            spans = calculateSpansForLine(line, globalLine);
             highlightCache.put(globalLine, spans);
         }
 
@@ -1306,9 +1700,10 @@ public class PopEditText extends View {
             if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
                 int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
                 float x = measureText(line, at, globalLine);
-                charAnimTmpPaint.set(paint);
+                Paint ghostPaint = (delAnimPaint != null) ? delAnimPaint : paint;
+                charAnimTmpPaint.set(ghostPaint);
                 charAnimTmpPaint.setUnderlineText(false);
-                int baseAlpha = paint.getAlpha();
+                int baseAlpha = ghostPaint.getAlpha();
                 charAnimTmpPaint.setAlpha((int) (baseAlpha * Math.max(0f, Math.min(1f, delAnimAlpha))));
                 canvas.drawText(delAnimText, x, y, charAnimTmpPaint);
             }
@@ -1321,12 +1716,15 @@ public class PopEditText extends View {
         for (HighlightSpan span : spans) {
             if (span.start < lastEnd) continue;
 
+            if (span.start >= line.length()) break;
+            int safeSpanEnd = Math.min(span.end, line.length());
+
             if (span.start > lastEnd) {
                 currentX += drawTextSegmentWithFade(canvas, line, lastEnd, span.start, currentX, y, paint, fadeStart, fadeEnd, fadeAlpha);
             }
 
-            currentX += drawTextSegmentWithFade(canvas, line, span.start, span.end, currentX, y, span.paint, fadeStart, fadeEnd, fadeAlpha);
-            lastEnd = span.end;
+            currentX += drawTextSegmentWithFade(canvas, line, span.start, safeSpanEnd, currentX, y, span.paint, fadeStart, fadeEnd, fadeAlpha);
+            lastEnd = safeSpanEnd;
         }
 
         if (lastEnd < line.length()) {
@@ -1336,13 +1734,7 @@ public class PopEditText extends View {
         if (isCharAnimationEnabled && globalLine == delAnimLine && delAnimText != null && !delAnimText.isEmpty() && delAnimAlpha > 0f) {
             int at = Math.max(0, Math.min(delAnimAtChar, line.length()));
             float x = measureText(line, at, globalLine);
-            Paint ghostPaint = paint;
-            for (HighlightSpan span : spans) {
-                if (at >= span.start && at < span.end) {
-                    ghostPaint = span.paint;
-                    break;
-                }
-            }
+            Paint ghostPaint = (delAnimPaint != null) ? delAnimPaint : paint;
             charAnimTmpPaint.set(ghostPaint);
             charAnimTmpPaint.setUnderlineText(false);
             int baseAlpha = ghostPaint.getAlpha();
@@ -1397,17 +1789,53 @@ public class PopEditText extends View {
         return currentX - x;
     }
 
-    private List<HighlightSpan> calculateSpansForLine(String line) {
+    private List<HighlightSpan> calculateSpansForLine(String line, int globalLine) {
         List<HighlightSpan> spans = new ArrayList<>();
-        if (highlightRules.isEmpty() || line.isEmpty()) {
+        if (highlightRules.isEmpty()) {
             return spans;
         }
 
+        HighlightRule stringRule = null;
+        HighlightRule blockCommentRule = null;
+        List<HighlightRule> regexRules = new ArrayList<>();
         for (HighlightRule rule : highlightRules) {
-            Matcher matcher = rule.pattern.matcher(line);
-            while (matcher.find()) {
-                if (matcher.start() == matcher.end()) continue;
-                spans.add(new HighlightSpan(matcher.start(), matcher.end(), rule.paint));
+            if (rule.type == HighlightRuleType.STRING && stringRule == null) {
+                stringRule = rule;
+            } else if (rule.type == HighlightRuleType.BLOCK_COMMENT && blockCommentRule == null) {
+                blockCommentRule = rule;
+            } else if (rule.type == HighlightRuleType.REGEX) {
+                regexRules.add(rule);
+            }
+        }
+
+        HighlightLineState startState = getLineStateAtStart(globalLine);
+        LineParseResult parseResult = parseLineForSyntax(
+                line,
+                startState.inBlockComment,
+                startState.stringState,
+                stringRule,
+                blockCommentRule,
+                true
+        );
+        spans.addAll(parseResult.spans);
+
+        if (globalLine >= windowStartLine
+                && globalLine < windowStartLine + linesWindow.size()) {
+            if (isBlockCommentsEnabled) {
+                blockCommentEndStateCache.put(globalLine, parseResult.endsInBlockComment);
+            }
+            stringEndStateCache.put(globalLine, parseResult.endsInStringState);
+        }
+
+        if (!regexRules.isEmpty() && !line.isEmpty()) {
+            for (HighlightRule rule : regexRules) {
+                Matcher matcher = rule.pattern.matcher(line);
+                while (matcher.find()) {
+                    if (matcher.start() == matcher.end()) continue;
+                    HighlightSpan span = new HighlightSpan(matcher.start(), matcher.end(), rule.paint);
+                    if (hasOverlap(span, spans)) continue;
+                    spans.add(span);
+                }
             }
         }
 
@@ -1415,6 +1843,722 @@ public class PopEditText extends View {
             Collections.sort(spans, (s1, s2) -> Integer.compare(s1.start, s2.start));
         }
         return spans;
+    }
+
+    private LineParseResult parseLineForSyntax(
+            String line,
+            boolean inBlockComment,
+            int stringState,
+            HighlightRule stringRule,
+            HighlightRule blockCommentRule,
+            boolean collectSpans
+    ) {
+        List<HighlightSpan> spans = new ArrayList<>();
+        int length = line.length();
+        int i = 0;
+        if (!isBlockCommentsEnabled) {
+            inBlockComment = false;
+        }
+        if (stringState == STRING_STATE_BACKTICK && !isBacktickStringsEnabled) {
+            stringState = 0;
+        }
+        if (stringState == STRING_STATE_TRIPLE && !isTripleQuoteStringsEnabled) {
+            stringState = 0;
+        }
+        if (stringState != 0 && !isMultiLineStringsEnabled && stringState != STRING_STATE_TRIPLE) {
+            stringState = 0;
+        }
+
+        while (i < length) {
+            if (inBlockComment) {
+                int end = findBlockCommentEnd(line, i);
+                if (end < 0) {
+                    if (collectSpans && blockCommentRule != null && isBlockCommentsEnabled && length > 0) {
+                        spans.add(new HighlightSpan(0, length, blockCommentRule.paint));
+                    }
+                    return new LineParseResult(spans, true, 0);
+                }
+                if (collectSpans && blockCommentRule != null && isBlockCommentsEnabled) {
+                    spans.add(new HighlightSpan(0, end + 2, blockCommentRule.paint));
+                }
+                i = end + 2;
+                inBlockComment = false;
+                continue;
+            }
+
+            if (stringState != 0) {
+                StringEndResult endResult = findStringEndForState(line, i, stringState);
+                if (endResult.found) {
+                    if (collectSpans && stringRule != null) {
+                        spans.add(new HighlightSpan(0, endResult.endIndex, stringRule.paint));
+                    }
+                    i = endResult.endIndex;
+                    stringState = 0;
+                    continue;
+                }
+                if (collectSpans && stringRule != null && length > 0) {
+                    spans.add(new HighlightSpan(0, length, stringRule.paint));
+                }
+                return new LineParseResult(spans, false, stringState);
+            }
+
+            if (isLineCommentStart(line, i)) {
+                if (collectSpans && length > i) {
+                    Paint commentPaint = (blockCommentRule != null) ? blockCommentRule.paint : paint;
+                    spans.add(new HighlightSpan(i, length, commentPaint));
+                }
+                return new LineParseResult(spans, false, 0);
+            }
+
+            char c = line.charAt(i);
+            if (isTripleQuoteStart(line, i) && !isEscaped(line, i)) {
+                int end = findTripleQuoteEnd(line, i + 3);
+                if (end >= 0) {
+                    if (collectSpans && stringRule != null) {
+                        spans.add(new HighlightSpan(i, end + 3, stringRule.paint));
+                    }
+                    i = end + 3;
+                    continue;
+                }
+                if (isTripleQuoteStringsEnabled) {
+                    if (collectSpans && stringRule != null && length > 0) {
+                        spans.add(new HighlightSpan(i, length, stringRule.paint));
+                    }
+                    return new LineParseResult(spans, false, STRING_STATE_TRIPLE);
+                }
+            }
+
+            if (isStringDelimiter(c) && !isEscaped(line, i)) {
+                int end = findStringEnd(line, i + 1, c);
+                if (end >= 0) {
+                    if (collectSpans && stringRule != null) {
+                        spans.add(new HighlightSpan(i, end + 1, stringRule.paint));
+                    }
+                    i = end + 1;
+                    continue;
+                }
+                if (isMultiLineStringsEnabled) {
+                    if (collectSpans && stringRule != null && length > 0) {
+                        spans.add(new HighlightSpan(i, length, stringRule.paint));
+                    }
+                    return new LineParseResult(spans, false, getStringStateForDelimiter(c));
+                }
+            }
+
+            if (isBlockCommentsEnabled
+                    && c == '/'
+                    && i + 1 < length
+                    && line.charAt(i + 1) == '*'
+                    && !isTokenEscaped(line, i)) {
+                int end = findBlockCommentEnd(line, i + 2);
+                if (end < 0) {
+                    if (collectSpans && blockCommentRule != null && length > 0) {
+                        spans.add(new HighlightSpan(i, length, blockCommentRule.paint));
+                    }
+                    return new LineParseResult(spans, true, 0);
+                }
+                if (collectSpans && blockCommentRule != null) {
+                    spans.add(new HighlightSpan(i, end + 2, blockCommentRule.paint));
+                }
+                i = end + 2;
+                continue;
+            }
+
+            i++;
+        }
+
+        return new LineParseResult(spans, inBlockComment, stringState);
+    }
+
+    private HighlightLineState getLineStateAtStart(int globalLine) {
+        if (globalLine <= windowStartLine) return new HighlightLineState(false, 0);
+        int windowEnd = windowStartLine + linesWindow.size() - 1;
+        if (globalLine > windowEnd) return new HighlightLineState(false, 0);
+
+        Boolean cachedBlockPrev = blockCommentEndStateCache.get(globalLine - 1);
+        Integer cachedStringPrev = stringEndStateCache.get(globalLine - 1);
+        if (cachedBlockPrev != null && cachedStringPrev != null) {
+            return new HighlightLineState(cachedBlockPrev, cachedStringPrev);
+        }
+
+        boolean inBlock = false;
+        int stringState = 0;
+        for (int line = windowStartLine; line < globalLine; line++) {
+            Boolean cachedBlock = blockCommentEndStateCache.get(line);
+            Integer cachedString = stringEndStateCache.get(line);
+            if (cachedBlock != null && cachedString != null) {
+                inBlock = cachedBlock;
+                stringState = cachedString;
+                continue;
+            }
+            String lineText = getLineFromWindowLocal(line - windowStartLine);
+            if (lineText == null) lineText = "";
+            LineParseResult result = parseLineForSyntax(
+                    lineText,
+                    inBlock,
+                    stringState,
+                    null,
+                    null,
+                    false
+            );
+            inBlock = result.endsInBlockComment;
+            stringState = result.endsInStringState;
+            blockCommentEndStateCache.put(line, inBlock);
+            stringEndStateCache.put(line, stringState);
+        }
+        return new HighlightLineState(inBlock, stringState);
+    }
+
+    private static boolean hasOverlap(HighlightSpan span, List<HighlightSpan> spans) {
+        for (HighlightSpan other : spans) {
+            if (span.start < other.end && other.start < span.end) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isStringDelimiter(char c) {
+        if (c == '"') return true;
+        if (c == '\'') return true;
+        return c == '`' && isBacktickStringsEnabled;
+    }
+
+    private static boolean isTokenEscaped(String line, int index) {
+        if (isEscaped(line, index)) return true;
+        int next = index + 1;
+        return next < line.length() && isEscaped(line, next);
+    }
+
+    private static boolean isEscaped(String line, int index) {
+        int backslashes = 0;
+        for (int i = index - 1; i >= 0; i--) {
+            if (line.charAt(i) != '\\') break;
+            backslashes++;
+        }
+        return (backslashes % 2) == 1;
+    }
+
+    private static int findStringEnd(String line, int start, char delimiter) {
+        for (int i = start; i < line.length(); i++) {
+            if (line.charAt(i) == delimiter && !isEscaped(line, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private boolean isTripleQuoteStart(String line, int index) {
+        if (!isTripleQuoteStringsEnabled) return false;
+        if (index + 2 >= line.length()) return false;
+        return line.charAt(index) == '"'
+                && line.charAt(index + 1) == '"'
+                && line.charAt(index + 2) == '"';
+    }
+
+    private static int findTripleQuoteEnd(String line, int start) {
+        for (int i = start; i + 2 < line.length(); i++) {
+            if (line.charAt(i) == '"'
+                    && line.charAt(i + 1) == '"'
+                    && line.charAt(i + 2) == '"'
+                    && !isEscaped(line, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static final int STRING_STATE_DOUBLE = 1;
+    private static final int STRING_STATE_SINGLE = 2;
+    private static final int STRING_STATE_BACKTICK = 3;
+    private static final int STRING_STATE_TRIPLE = 4;
+
+    private int getStringStateForDelimiter(char delimiter) {
+        if (delimiter == '"') return STRING_STATE_DOUBLE;
+        if (delimiter == '\'') return STRING_STATE_SINGLE;
+        return STRING_STATE_BACKTICK;
+    }
+
+    private StringEndResult findStringEndForState(String line, int start, int state) {
+        if (state == STRING_STATE_TRIPLE) {
+            int end = findTripleQuoteEnd(line, start);
+            return new StringEndResult(end >= 0, end >= 0 ? end + 3 : start);
+        }
+        char delimiter = '"';
+        if (state == STRING_STATE_SINGLE) delimiter = '\'';
+        if (state == STRING_STATE_BACKTICK) delimiter = '`';
+        int end = findStringEnd(line, start, delimiter);
+        return new StringEndResult(end >= 0, end >= 0 ? end + 1 : start);
+    }
+
+    private static class StringEndResult {
+        final boolean found;
+        final int endIndex;
+        StringEndResult(boolean found, int endIndex) {
+            this.found = found;
+            this.endIndex = endIndex;
+        }
+    }
+
+    private static int findBlockCommentEnd(String line, int start) {
+        for (int i = start; i + 1 < line.length(); i++) {
+            if (line.charAt(i) == '*' && line.charAt(i + 1) == '/' && !isTokenEscaped(line, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean isBracketChar(char c) {
+        return c == '(' || c == ')' || c == '[' || c == ']' || c == '{' || c == '}';
+    }
+
+    private static boolean isOpeningBracket(char c) {
+        return c == '(' || c == '[' || c == '{';
+    }
+
+    private static boolean isClosingBracket(char c) {
+        return c == ')' || c == ']' || c == '}';
+    }
+
+    private static char matchingBracket(char c) {
+        switch (c) {
+            case '(': return ')';
+            case ')': return '(';
+            case '[': return ']';
+            case ']': return '[';
+            case '{': return '}';
+            case '}': return '{';
+            default: return 0;
+        }
+    }
+
+    private boolean isLineCommentStart(String line, int index) {
+        if (index < 0 || index >= line.length()) return false;
+        if (line.charAt(index) == '#' && !isTokenEscaped(line, index)) return true;
+        if (line.charAt(index) == '/'
+                && index + 1 < line.length()
+                && line.charAt(index + 1) == '/'
+                && !isTokenEscaped(line, index)) {
+            return true;
+        }
+        return false;
+    }
+
+    private BracketMatch findBracketMatchInVisible(
+            int firstVisibleLine,
+            int lastVisibleLine,
+            java.util.HashMap<Integer, String> directLines
+    ) {
+        if (!isBracketMatchingEnabled) return null;
+        if (cursorLine < firstVisibleLine || cursorLine > lastVisibleLine) return null;
+
+        String cursorLineText = getLineTextForRenderWithDirect(cursorLine, directLines);
+        if (cursorLineText == null) return null;
+
+        int targetIndex = -1;
+        char targetChar = 0;
+        if (cursorChar > 0 && cursorChar - 1 < cursorLineText.length()) {
+            char c = cursorLineText.charAt(cursorChar - 1);
+            if (isBracketChar(c)) {
+                targetIndex = cursorChar - 1;
+                targetChar = c;
+            }
+        }
+        if (targetIndex < 0 && cursorChar < cursorLineText.length()) {
+            char c = cursorLineText.charAt(cursorChar);
+            if (isBracketChar(c)) {
+                targetIndex = cursorChar;
+                targetChar = c;
+            }
+        }
+        if (targetIndex < 0) return null;
+
+        HighlightLineState startState = getLineStateAtStart(firstVisibleLine);
+        boolean inBlockComment = startState.inBlockComment && isBlockCommentsEnabled;
+        int stringState = startState.stringState;
+        if (!isBlockCommentsEnabled) inBlockComment = false;
+        if (!isMultiLineStringsEnabled && stringState != STRING_STATE_TRIPLE) stringState = 0;
+        if (!isBacktickStringsEnabled && stringState == STRING_STATE_BACKTICK) stringState = 0;
+        if (!isTripleQuoteStringsEnabled && stringState == STRING_STATE_TRIPLE) stringState = 0;
+
+        java.util.ArrayDeque<BracketToken> stack = new java.util.ArrayDeque<>();
+
+        for (int line = firstVisibleLine; line <= lastVisibleLine; line++) {
+            String text = getLineTextForRenderWithDirect(line, directLines);
+            if (text == null) text = "";
+            int len = text.length();
+            int i = 0;
+            boolean inLineComment = false;
+
+            while (i < len) {
+                if (inLineComment) break;
+
+                if (inBlockComment) {
+                    int end = findBlockCommentEnd(text, i);
+                    int endPos = (end < 0) ? len : end + 2;
+                    if (line == cursorLine && targetIndex >= i && targetIndex < endPos) return null;
+                    if (end < 0) break;
+                    i = end + 2;
+                    inBlockComment = false;
+                    continue;
+                }
+
+                if (stringState != 0) {
+                    StringEndResult endResult = findStringEndForState(text, i, stringState);
+                    int endPos = endResult.found ? endResult.endIndex : len;
+                    if (line == cursorLine && targetIndex >= i && targetIndex < endPos) return null;
+                    if (!endResult.found) break;
+                    i = endResult.endIndex;
+                    stringState = 0;
+                    continue;
+                }
+
+                if (isLineCommentStart(text, i)) {
+                    if (line == cursorLine && targetIndex >= i) return null;
+                    inLineComment = true;
+                    break;
+                }
+
+                if (isBlockCommentsEnabled
+                        && i + 1 < len
+                        && text.charAt(i) == '/'
+                        && text.charAt(i + 1) == '*'
+                        && !isTokenEscaped(text, i)) {
+                    int end = findBlockCommentEnd(text, i + 2);
+                    int endPos = (end < 0) ? len : end + 2;
+                    if (line == cursorLine && targetIndex >= i && targetIndex < endPos) return null;
+                    if (end < 0) {
+                        inBlockComment = true;
+                        break;
+                    }
+                    i = end + 2;
+                    continue;
+                }
+
+                if (isTripleQuoteStart(text, i) && !isEscaped(text, i)) {
+                    int end = findTripleQuoteEnd(text, i + 3);
+                    int endPos = end >= 0 ? end + 3 : len;
+                    if (line == cursorLine && targetIndex >= i && targetIndex < endPos) return null;
+                    if (end < 0) {
+                        if (isTripleQuoteStringsEnabled) {
+                            stringState = STRING_STATE_TRIPLE;
+                        }
+                        break;
+                    }
+                    i = end + 3;
+                    continue;
+                }
+
+                char c = text.charAt(i);
+                if (isStringDelimiter(c) && !isEscaped(text, i)) {
+                    int end = findStringEnd(text, i + 1, c);
+                    int endPos = end >= 0 ? end + 1 : len;
+                    if (line == cursorLine && targetIndex >= i && targetIndex < endPos) return null;
+                    if (end < 0) {
+                        if (isMultiLineStringsEnabled) {
+                            stringState = getStringStateForDelimiter(c);
+                        }
+                        break;
+                    }
+                    i = end + 1;
+                    continue;
+                }
+
+                if (isBracketChar(c) && !isEscaped(text, i)) {
+                    BracketToken token = new BracketToken(line, i, c);
+                    if (isOpeningBracket(c)) {
+                        stack.push(token);
+                    } else if (isClosingBracket(c)) {
+                        if (!stack.isEmpty() && stack.peek().bracket == matchingBracket(c)) {
+                            BracketToken open = stack.pop();
+                            if (line == cursorLine && i == targetIndex) {
+                                return new BracketMatch(open.line, open.ch, line, i);
+                            }
+                            if (open.line == cursorLine && open.ch == targetIndex) {
+                                return new BracketMatch(open.line, open.ch, line, i);
+                            }
+                        }
+                    }
+                }
+
+                i++;
+            }
+        }
+        return new BracketMatch(cursorLine, targetIndex, cursorLine, targetIndex);
+    }
+
+    private void drawBracketMatchForLine(
+            Canvas canvas,
+            String line,
+            int globalLine,
+            BracketMatch match
+    ) {
+        if (match == null) return;
+        if (globalLine != match.openLine && globalLine != match.closeLine) return;
+        if (line == null || line.isEmpty()) return;
+
+        if (match.openLine == match.closeLine) {
+            drawBracketBox(canvas, line, globalLine, match.openChar);
+            if (match.openChar != match.closeChar) {
+                drawBracketBox(canvas, line, globalLine, match.closeChar);
+            }
+            return;
+        }
+
+        int index = (globalLine == match.openLine) ? match.openChar : match.closeChar;
+        drawBracketBox(canvas, line, globalLine, index);
+    }
+
+    private void drawBracketBox(Canvas canvas, String line, int globalLine, int index) {
+        if (index < 0 || index >= line.length()) return;
+
+        float left = measureText(line, index, globalLine);
+        float right = measureText(line, index + 1, globalLine);
+        if (right <= left) {
+            right = left + paint.measureText(line, index, index + 1);
+        }
+
+        float top = globalLine * lineHeight;
+        float bottom = top + lineHeight;
+        canvas.drawRect(left, top, right, bottom, bracketMatchPaint);
+    }
+
+    private List<BracketGuideToken> updateBracketGuideStateForLine(String line, int globalLine, BracketGuideState state) {
+        if (line == null) line = "";
+        int length = line.length();
+        int firstNonSpace = getFirstNonSpaceIndex(line);
+        java.util.ArrayDeque<BracketGuideToken> drawStack = new java.util.ArrayDeque<>(state.stack);
+
+        int i = 0;
+        boolean inLineComment = false;
+
+        while (i < length) {
+            if (inLineComment) break;
+
+            if (state.inBlockComment) {
+                int end = findBlockCommentEnd(line, i);
+                if (end < 0) return getGuideTokensFromStack(drawStack);
+                i = end + 2;
+                state.inBlockComment = false;
+                continue;
+            }
+
+            if (state.stringState != 0) {
+                StringEndResult endResult = findStringEndForState(line, i, state.stringState);
+                if (!endResult.found) return getGuideTokensFromStack(drawStack);
+                i = endResult.endIndex;
+                state.stringState = 0;
+                continue;
+            }
+
+            if (isLineCommentStart(line, i)) {
+                inLineComment = true;
+                break;
+            }
+
+            if (isBlockCommentsEnabled
+                    && i + 1 < length
+                    && line.charAt(i) == '/'
+                    && line.charAt(i + 1) == '*'
+                    && !isTokenEscaped(line, i)) {
+                int end = findBlockCommentEnd(line, i + 2);
+                if (end < 0) {
+                    state.inBlockComment = true;
+                    return getGuideTokensFromStack(drawStack);
+                }
+                i = end + 2;
+                continue;
+            }
+
+            if (isTripleQuoteStart(line, i) && !isEscaped(line, i)) {
+                int end = findTripleQuoteEnd(line, i + 3);
+                if (end < 0) {
+                    if (isTripleQuoteStringsEnabled) {
+                        state.stringState = STRING_STATE_TRIPLE;
+                    }
+                    return getGuideTokensFromStack(drawStack);
+                }
+                i = end + 3;
+                continue;
+            }
+
+            char c = line.charAt(i);
+            if (isStringDelimiter(c) && !isEscaped(line, i)) {
+                int end = findStringEnd(line, i + 1, c);
+                if (end < 0) {
+                    if (isMultiLineStringsEnabled) {
+                        state.stringState = getStringStateForDelimiter(c);
+                    }
+                    return getGuideTokensFromStack(drawStack);
+                }
+                i = end + 1;
+                continue;
+            }
+
+            if ((c == '{' || c == '}') && !isEscaped(line, i)) {
+                if (c == '{') {
+                    int column = (firstNonSpace >= 0) ? firstNonSpace : i;
+                    float x = getGuideXForColumn(line, column, globalLine);
+                    state.stack.push(new BracketGuideToken(column, x));
+                } else if (c == '}') {
+                    if (!state.stack.isEmpty()) {
+                        state.stack.pop();
+                    }
+                    if (!drawStack.isEmpty()) {
+                        drawStack.pop();
+                    }
+                }
+            }
+
+            i++;
+        }
+
+        return getGuideTokensFromStack(drawStack);
+    }
+
+    private void advanceBracketGuideStateForLine(String line, int globalLine, BracketGuideState state) {
+        if (line == null) line = "";
+        int length = line.length();
+        int firstNonSpace = getFirstNonSpaceIndex(line);
+
+        int i = 0;
+        boolean inLineComment = false;
+
+        while (i < length) {
+            if (inLineComment) break;
+
+            if (state.inBlockComment) {
+                int end = findBlockCommentEnd(line, i);
+                if (end < 0) return;
+                i = end + 2;
+                state.inBlockComment = false;
+                continue;
+            }
+
+            if (state.stringState != 0) {
+                StringEndResult endResult = findStringEndForState(line, i, state.stringState);
+                if (!endResult.found) return;
+                i = endResult.endIndex;
+                state.stringState = 0;
+                continue;
+            }
+
+            if (isLineCommentStart(line, i)) {
+                inLineComment = true;
+                break;
+            }
+
+            if (isBlockCommentsEnabled
+                    && i + 1 < length
+                    && line.charAt(i) == '/'
+                    && line.charAt(i + 1) == '*'
+                    && !isTokenEscaped(line, i)) {
+                int end = findBlockCommentEnd(line, i + 2);
+                if (end < 0) {
+                    state.inBlockComment = true;
+                    return;
+                }
+                i = end + 2;
+                continue;
+            }
+
+            if (isTripleQuoteStart(line, i) && !isEscaped(line, i)) {
+                int end = findTripleQuoteEnd(line, i + 3);
+                if (end < 0) {
+                    if (isTripleQuoteStringsEnabled) {
+                        state.stringState = STRING_STATE_TRIPLE;
+                    }
+                    return;
+                }
+                i = end + 3;
+                continue;
+            }
+
+            char c = line.charAt(i);
+            if (isStringDelimiter(c) && !isEscaped(line, i)) {
+                int end = findStringEnd(line, i + 1, c);
+                if (end < 0) {
+                    if (isMultiLineStringsEnabled) {
+                        state.stringState = getStringStateForDelimiter(c);
+                    }
+                    return;
+                }
+                i = end + 1;
+                continue;
+            }
+
+            if ((c == '{' || c == '}') && !isEscaped(line, i)) {
+                if (c == '{') {
+                    int column = (firstNonSpace >= 0) ? firstNonSpace : i;
+                    float x = getGuideXForColumn(line, column, globalLine);
+                    state.stack.push(new BracketGuideToken(column, x));
+                } else if (c == '}') {
+                    if (!state.stack.isEmpty()) {
+                        state.stack.pop();
+                    }
+                }
+            }
+
+            i++;
+        }
+    }
+
+    private void drawBracketGuidesForLine(Canvas canvas, String line, int globalLine, List<BracketGuideToken> guideTokens) {
+        if (!isBracketGuidesEnabled || guideTokens == null || guideTokens.isEmpty()) return;
+        if (line == null) line = "";
+
+        java.util.HashSet<Float> seen = new java.util.HashSet<>();
+        float top = globalLine * lineHeight;
+        float bottom = top + lineHeight;
+
+        for (BracketGuideToken token : guideTokens) {
+            float x = token.x;
+            if (!seen.add(x)) continue;
+            if (!isWhitespaceAtX(line, globalLine, x)) {
+                continue;
+            }
+            canvas.drawLine(x, top, x, bottom, bracketGuidePaint);
+        }
+    }
+
+    private static int getFirstNonSpaceIndex(String line) {
+        for (int i = 0; i < line.length(); i++) {
+            if (!Character.isWhitespace(line.charAt(i))) return i;
+        }
+        return -1;
+    }
+
+    private static List<BracketGuideToken> getGuideTokensFromStack(java.util.ArrayDeque<BracketGuideToken> stack) {
+        List<BracketGuideToken> tokens = new ArrayList<>();
+        for (BracketGuideToken token : stack) {
+            tokens.add(token);
+        }
+        return tokens;
+    }
+
+    private float getGuideXForColumn(String line, int column, int globalLine) {
+        if (line == null) line = "";
+        if (column <= line.length()) {
+            return measureText(line, column, globalLine);
+        }
+        float base = measureText(line, line.length(), globalLine);
+        float spaceWidth = paint.measureText(" ");
+        return base + spaceWidth * (column - line.length());
+    }
+
+    private boolean isWhitespaceAtX(String line, int globalLine, float x) {
+        if (line == null || line.isEmpty()) return true;
+        if (x <= 0f) return Character.isWhitespace(line.charAt(0));
+        float fullWidth = measureText(line, line.length(), globalLine);
+        if (x >= fullWidth) return true;
+        for (int i = 0; i < line.length(); i++) {
+            float right = measureText(line, i + 1, globalLine);
+            if (x < right) {
+                return Character.isWhitespace(line.charAt(i));
+            }
+        }
+        return true;
     }
 
     private void drawColorCodeBackgrounds(Canvas canvas, String line, int globalLine) {
@@ -1467,7 +2611,7 @@ public class PopEditText extends View {
 
         List<HighlightSpan> spans = highlightCache.get(globalLine);
         if (spans == null) {
-            spans = calculateSpansForLine(line);
+            spans = calculateSpansForLine(line, globalLine);
             highlightCache.put(globalLine, spans);
         }
 
@@ -1910,7 +3054,7 @@ public class PopEditText extends View {
     private void invalidatePendingIO() {
         ioTaskVersion.incrementAndGet();
         ioHandler.removeCallbacksAndMessages(null);
-        highlightCache.clear();
+        clearHighlightCaches();
     }
 
     public void clearContent() {
@@ -1927,7 +3071,7 @@ public class PopEditText extends View {
         }
         synchronized (modifiedLines) { modifiedLines.clear(); }
         synchronized (lineWidthCache) { lineWidthCache.clear(); }
-        highlightCache.clear();
+        clearHighlightCaches();
         currentMaxWindowLineWidth = 0f;
         globalMaxLineWidth = 0f;
 
@@ -1955,7 +3099,7 @@ public class PopEditText extends View {
         }
         synchronized (modifiedLines) { modifiedLines.clear(); }
         synchronized (lineWidthCache) { lineWidthCache.clear(); }
-        highlightCache.clear();
+        clearHighlightCaches();
         currentMaxWindowLineWidth = 0f;
         globalMaxLineWidth = 0f;
         synchronized (lineOffsetsLock) { lineOffsets = new long[0]; }
@@ -2220,7 +3364,7 @@ private void endLargeEditUi(boolean invalidate) {
                 computeWidthForLine(cursorLine + 1, after);
 
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
-                highlightCache.clear();
+                clearHighlightCaches();
                 cursorLine++; cursorChar = 0;
 
                 int newLineCount = getLinesCount();
@@ -2232,7 +3376,7 @@ private void endLargeEditUi(boolean invalidate) {
                 String modified = base.substring(0, pos) + c + base.substring(pos);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
-                highlightCache.remove(cursorLine);
+                invalidateHighlightCacheForLine(cursorLine);
                 cursorChar++;
                 float newWidth = paint.measureText(modified);
                 synchronized (lineWidthCache) { lineWidthCache.put(cursorLine, newWidth); }
@@ -2282,12 +3426,13 @@ private void endLargeEditUi(boolean invalidate) {
                 int safeStart = Math.max(0, cursorChar - 1);
                 if (isCharAnimationEnabled) {
                     String removed = base.substring(safeStart, Math.min(cursorChar, base.length()));
-                    startDeleteAnimation(cursorLine, safeStart, removed);
+                    Paint p = getPaintForChar(cursorLine, safeStart, base);
+                    startDeleteAnimation(cursorLine, safeStart, removed, p);
                 }
                 String modified = base.substring(0, safeStart) + base.substring(cursorChar);
                 updateLocalLine(localIdx, modified);
                 modifiedLines.put(cursorLine, modified);
-                highlightCache.remove(cursorLine);
+                invalidateHighlightCacheForLine(cursorLine);
                 cursorChar = safeStart;
                 computeWidthForLine(cursorLine, modified);
                 if (oldWidth != null && oldWidth >= currentMaxWindowLineWidth) recalculateMaxLineWidth();
@@ -2305,7 +3450,7 @@ private void endLargeEditUi(boolean invalidate) {
                 String merged = prev + base;
                 updateLocalLine(prevLocal, merged);
                 modifiedLines.put(prevGlobal, merged);
-                highlightCache.clear();
+                clearHighlightCaches();
 
                 if (localIdx < linesWindow.size()) linesWindow.remove(localIdx);
 
@@ -2347,7 +3492,8 @@ private void endLargeEditUi(boolean invalidate) {
                 Float oldWidth = lineWidthCache.get(cursorLine);
                 if (isCharAnimationEnabled) {
                     String removed = base.substring(cursorChar, Math.min(cursorChar + 1, base.length()));
-                    startDeleteAnimation(cursorLine, cursorChar, removed);
+                    Paint p = getPaintForChar(cursorLine, cursorChar, base);
+                    startDeleteAnimation(cursorLine, cursorChar, removed, p);
                 }
                 String modified = base.substring(0, cursorChar) + base.substring(cursorChar + 1);
                 updateLocalLine(localIdx, modified);
@@ -2416,7 +3562,8 @@ private void endLargeEditUi(boolean invalidate) {
                     }
 
                     if (removed != null && !removed.isEmpty()) {
-                        startDeleteAnimation(composingLine, at, removed);
+                        Paint p = getPaintForChar(composingLine, at, base);
+                        startDeleteAnimation(composingLine, at, removed, p);
                     }
                 }
             }
@@ -3576,13 +4723,14 @@ private void endLargeEditUi(boolean invalidate) {
         else post(start);
     }
 
-    private void startDeleteAnimation(int targetLine, int atChar, @Nullable String removedText) {
+    private void startDeleteAnimation(int targetLine, int atChar, @Nullable String removedText, @Nullable Paint paintToUse) {
         if (!isCharAnimationEnabled) return;
         if (removedText == null || removedText.isEmpty()) return;
 
         final int lineForAnim = targetLine;
         final int atForAnim = Math.max(0, atChar);
         final String textForAnim = removedText;
+        final Paint p = (paintToUse != null) ? paintToUse : paint;
 
         Runnable start = () -> {
             if (charAnimAnimator != null) charAnimAnimator.cancel();
@@ -3590,6 +4738,7 @@ private void endLargeEditUi(boolean invalidate) {
             delAnimLine = lineForAnim;
             delAnimAtChar = atForAnim;
             delAnimText = textForAnim;
+            delAnimPaint = p;
             delAnimAlpha = 1f;
             invalidateLineGlobal(lineForAnim);
 
@@ -3606,6 +4755,7 @@ private void endLargeEditUi(boolean invalidate) {
                     delAnimLine = -1;
                     delAnimAtChar = 0;
                     delAnimText = null;
+                    delAnimPaint = null;
                     invalidate();
                 }
 
@@ -3614,6 +4764,7 @@ private void endLargeEditUi(boolean invalidate) {
                     delAnimLine = -1;
                     delAnimAtChar = 0;
                     delAnimText = null;
+                    delAnimPaint = null;
                     invalidate();
                 }
             });
@@ -3622,6 +4773,34 @@ private void endLargeEditUi(boolean invalidate) {
 
         if (Looper.myLooper() == Looper.getMainLooper()) start.run();
         else post(start);
+    }
+
+    private void handleAutoPairing(String text) {
+        if (!isAutoPairingEnabled || text == null || text.length() == 0 || text.length() >= 100) return;
+
+        char c = text.charAt(text.length() - 1);
+        String closing = null;
+        if (c == '(') closing = ")";
+        else if (c == '{') closing = "}";
+        else if (c == '[') closing = "]";
+        else if (c == '"') closing = "\"";
+        else if (c == '\'') closing = "'";
+        else if (c == '`') closing = "`";
+        else if (c == '*') {
+             if (cursorChar >= 2) {
+                 String ln = getLineTextForRender(cursorLine);
+                 if (ln != null && ln.length() >= cursorChar && ln.charAt(cursorChar - 2) == '/') {
+                     closing = "*/";
+                 }
+             }
+        }
+
+        if (closing != null) {
+            insertTextAtCursor(closing);
+            for (int i = 0; i < closing.length(); i++) {
+                moveCursorLeft();
+            }
+        }
     }
 
     @Override
@@ -3641,11 +4820,14 @@ private void endLargeEditUi(boolean invalidate) {
             @Override public boolean commitText(CharSequence text, int newCursorPosition) {
                 if (isDisabled) return true;
                 if (text == null) return super.commitText(text, newCursorPosition);
+                
+                String str = text.toString();
 
                 if (hasSelection) {
-                    replaceSelectionWithText(text.toString());
+                    replaceSelectionWithText(str);
                     commitComposing(true);
                     startCharAnimationFromText(text);
+                    handleAutoPairing(str);
                     updateSuggestion();
                     return true;
                 }
@@ -3654,13 +4836,16 @@ private void endLargeEditUi(boolean invalidate) {
                     replaceComposingWith(text);
                     commitComposing(true);
                     startCharAnimationFromText(text);
+                    handleAutoPairing(str);
                     updateSuggestion();
                     return true;
                 }
 
-                insertTextAtCursor(text.toString());
+                insertTextAtCursor(str);
                 commitComposing(true);
                 startCharAnimationFromText(text);
+                handleAutoPairing(str);
+
                 updateSuggestion();
                 return true;
             }
@@ -3752,6 +4937,13 @@ private void endLargeEditUi(boolean invalidate) {
             case MotionEvent.ACTION_MOVE:
                 if (Math.abs(ex - downX) > touchSlop || Math.abs(ey - downY) > touchSlop) movedSinceDown = true;
 
+                if (isLineNumberSelecting) {
+                    float y = ey + scrollY;
+                    int line = Math.max(0, (int) (y / lineHeight));
+                    updateLineNumberSelection(line);
+                    return true;
+                }
+
                 if (draggingHandle != 0) {
                     updateHandlePosition(ex, ey);
                     if (draggingHandle == 1 || draggingHandle == 2) showPopupAtSelection();
@@ -3775,6 +4967,15 @@ private void endLargeEditUi(boolean invalidate) {
 
             case MotionEvent.ACTION_UP:
                 mainHandler.removeCallbacks(autoScrollRunnable);
+
+                if (isLineNumberSelecting) {
+                    isLineNumberSelecting = false;
+                    lineNumberSelectAnchorLine = -1;
+                    selecting = false;
+                    pointerDown = false;
+                    if (hasSelection) showPopupAtSelection();
+                    return true;
+                }
                 
                 // --- Check for tap on suggestion FIRST and consume if it's a clean tap ---
                 float y = event.getY() + scrollY;
@@ -3843,6 +5044,8 @@ private void endLargeEditUi(boolean invalidate) {
             case MotionEvent.ACTION_CANCEL:
                 mainHandler.removeCallbacks(autoScrollRunnable);
                 pointerDown = false; draggingHandle = 0; selecting = false;
+                isLineNumberSelecting = false;
+                lineNumberSelectAnchorLine = -1;
                 clearActiveSuggestion(); // Clear suggestion on touch cancel
                 Log.d("PopEditText", "onTouchEvent.ACTION_CANCEL: Passing to GestureDetector.");
                 gestureDetector.onTouchEvent(event);
