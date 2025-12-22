@@ -213,6 +213,34 @@ public class PopEditText extends View {
     private boolean isBracketGuidesEnabled = false;
     private final Paint bracketGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float bracketGuideStrokeWidth = 2f;
+    private boolean isWhitespaceGuidesEnabled = false;
+    private final Paint whitespaceGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float whitespaceGuideSpaceWidth = 0f;
+    private float whitespaceGuideTabWidth = 0f;
+    private float[] whitespaceWidthBuffer;
+    private int whitespaceGuideSpaceStep = 1;
+    private static final class WhitespaceDrawState {
+        int syntaxIndex;
+    }
+    private final WhitespaceDrawState whitespaceDrawState = new WhitespaceDrawState();
+    private final Paint selectionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint caretPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint loadingCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF loadingCircleRect = new RectF();
+    private final char[] lineNumberChars = new char[16];
+
+    private final LinkedHashMap<Integer, int[]> colorCodeBgCache =
+            new LinkedHashMap<Integer, int[]>(600, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Integer, int[]> eldest) {
+                    return size() > 600;
+                }
+            };
+    private HighlightRule whitespaceStringRule;
+    private HighlightRule whitespaceCommentRule;
+    private static final String WHITESPACE_GUIDE_SPACE = "\u00B7";
+    private static final String WHITESPACE_GUIDE_TAB = "\u2192";
 
     // --- Current Line Highlight State ---
     private boolean highlightCurrentLine = true;
@@ -268,6 +296,7 @@ public class PopEditText extends View {
     private final List<HighlightRule> highlightRules = new ArrayList<>();
     private HighlightRule stringHighlightRule;
     private HighlightRule blockCommentHighlightRule;
+    private final ArrayList<HighlightRule> regexHighlightRules = new ArrayList<>();
     private final LinkedHashMap<Integer, List<HighlightSpan>> highlightCache =
         new LinkedHashMap<Integer, List<HighlightSpan>>(1000, 0.75f, true) {
             @Override
@@ -526,6 +555,19 @@ public class PopEditText extends View {
         bracketGuidePaint.setColor(0xFF888888);
         bracketGuidePaint.setStyle(Paint.Style.STROKE);
         bracketGuidePaint.setStrokeWidth(bracketGuideStrokeWidth);
+        whitespaceGuidePaint.setColor(0xFF555555);
+        whitespaceGuidePaint.setStyle(Paint.Style.FILL);
+        whitespaceGuidePaint.setUnderlineText(false);
+        updateWhitespaceGuideMetrics();
+        whitespaceStringRule = new HighlightRule("", STYLE_NORMAL, 0xFF000000, paint.getTextSize(), paint.getTypeface(), false, HighlightRuleType.STRING);
+        whitespaceCommentRule = new HighlightRule("", STYLE_NORMAL, 0xFF000000, paint.getTextSize(), paint.getTypeface(), false, HighlightRuleType.BLOCK_COMMENT);
+
+        selectionPaint.setStyle(Paint.Style.FILL);
+        caretPaint.setStyle(Paint.Style.STROKE);
+        caretPaint.setStrokeCap(Paint.Cap.BUTT);
+        handlePaint.setStyle(Paint.Style.FILL);
+        loadingCirclePaint.setStyle(Paint.Style.STROKE);
+        loadingCirclePaint.setStrokeCap(Paint.Cap.ROUND);
 
         // Initialization for line numbers
         lineNumbersPaint.setTextAlign(Paint.Align.RIGHT);
@@ -1089,6 +1131,24 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setWhitespaceGuidesEnabled(boolean enabled) {
+        if (this.isWhitespaceGuidesEnabled == enabled) return;
+        this.isWhitespaceGuidesEnabled = enabled;
+        invalidate();
+    }
+
+    public void setWhitespaceGuidesColor(int color) {
+        whitespaceGuidePaint.setColor(color);
+        if (isWhitespaceGuidesEnabled) invalidate();
+    }
+
+    public void setWhitespaceGuidesSpaceStep(int spacesPerDot) {
+        int safeStep = Math.max(1, spacesPerDot);
+        if (whitespaceGuideSpaceStep == safeStep) return;
+        whitespaceGuideSpaceStep = safeStep;
+        if (isWhitespaceGuidesEnabled) invalidate();
+    }
+
     public void setCursorWidth(float width) {
         if (this.cursorWidth == width) return;
         this.cursorWidth = width;
@@ -1145,6 +1205,8 @@ public class PopEditText extends View {
             stringHighlightRule = rule;
         } else if (type == HighlightRuleType.BLOCK_COMMENT) {
             blockCommentHighlightRule = rule;
+        } else {
+            regexHighlightRules.add(rule);
         }
         clearHighlightCaches();
         invalidate();
@@ -1154,6 +1216,7 @@ public class PopEditText extends View {
         highlightRules.clear();
         stringHighlightRule = null;
         blockCommentHighlightRule = null;
+        regexHighlightRules.clear();
         clearHighlightCaches();
         invalidate();
     }
@@ -1162,12 +1225,14 @@ public class PopEditText extends View {
         highlightCache.clear();
         blockCommentEndStateCache.clear();
         stringEndStateCache.clear();
+        colorCodeBgCache.clear();
     }
 
     private void invalidateHighlightCacheForLine(int line) {
         highlightCache.remove(line);
         blockCommentEndStateCache.clear();
         stringEndStateCache.clear();
+        colorCodeBgCache.remove(line);
     }
 
     public void setColorHighlightingEnabled(boolean enabled) {
@@ -1251,10 +1316,13 @@ public class PopEditText extends View {
         }
         lineNumbersPaint.setTextSize(size);
         lineHeight = paint.getFontSpacing();
+        updateWhitespaceGuideMetrics();
 
         for (HighlightRule rule : highlightRules) {
             rule.updateTextSize(size);
         }
+        if (whitespaceStringRule != null) whitespaceStringRule.updateTextSize(size);
+        if (whitespaceCommentRule != null) whitespaceCommentRule.updateTextSize(size);
         clearHighlightCaches();
 
         // Invalidate caches and approximate new max width
@@ -1269,6 +1337,139 @@ public class PopEditText extends View {
 
         requestLayout(); // Still needed for gutter
         invalidate();
+    }
+
+    private void updateWhitespaceGuideMetrics() {
+        whitespaceGuidePaint.setTextSize(paint.getTextSize());
+        whitespaceGuidePaint.setTypeface(paint.getTypeface());
+        whitespaceGuideSpaceWidth = whitespaceGuidePaint.measureText(WHITESPACE_GUIDE_SPACE);
+        whitespaceGuideTabWidth = whitespaceGuidePaint.measureText(WHITESPACE_GUIDE_TAB);
+    }
+
+    private int writeIntToChars(int value, char[] out) {
+        int v = value;
+        int pos = out.length;
+        if (v == 0) {
+            out[--pos] = '0';
+            return pos;
+        }
+        while (v > 0 && pos > 0) {
+            int digit = v % 10;
+            out[--pos] = (char) ('0' + digit);
+            v /= 10;
+        }
+        return pos;
+    }
+
+    private void ensureHighlightCacheForVisibleRange(int firstVisibleLine, int lastVisibleLine, @Nullable java.util.HashMap<Integer, String> directLines) {
+        if (highlightRules.isEmpty()) return;
+        if (firstVisibleLine > lastVisibleLine) return;
+
+        HighlightRule stringRule = stringHighlightRule;
+        HighlightRule blockRule = blockCommentHighlightRule;
+        boolean needSyntax = stringRule != null || blockRule != null;
+        boolean needRegex = !regexHighlightRules.isEmpty();
+        if (!needSyntax && !needRegex) return;
+
+        boolean inBlock = false;
+        int stringState = 0;
+        final int localWindowStart = windowStartLine;
+        final int localWindowEnd;
+        synchronized (linesWindow) {
+            localWindowEnd = localWindowStart + linesWindow.size();
+        }
+
+        if (needSyntax) {
+            int prevLine = firstVisibleLine - 1;
+            Boolean cachedBlockPrev = blockCommentEndStateCache.get(prevLine);
+            Integer cachedStringPrev = stringEndStateCache.get(prevLine);
+            if (cachedBlockPrev != null && cachedStringPrev != null) {
+                inBlock = cachedBlockPrev;
+                stringState = cachedStringPrev;
+            } else {
+                int seedStart = localWindowStart;
+                int seedEnd = Math.min(firstVisibleLine, localWindowEnd);
+                for (int line = seedStart; line < seedEnd; line++) {
+                    String seedLine = getLineTextForRenderWithDirect(line, directLines);
+                    if (seedLine == null) seedLine = "";
+                    LineParseResult seedResult = parseLineForSyntax(
+                            seedLine,
+                            inBlock,
+                            stringState,
+                            null,
+                            null,
+                            false
+                    );
+                    inBlock = seedResult.endsInBlockComment;
+                    stringState = seedResult.endsInStringState;
+                    if (line >= localWindowStart && line < localWindowEnd) {
+                        if (isBlockCommentsEnabled) blockCommentEndStateCache.put(line, inBlock);
+                        stringEndStateCache.put(line, stringState);
+                    }
+                    if (line + 1 == firstVisibleLine) break;
+                }
+            }
+        }
+
+        for (int globalLine = firstVisibleLine; globalLine <= lastVisibleLine; globalLine++) {
+            List<HighlightSpan> cachedSpans = highlightCache.get(globalLine);
+            boolean hasCachedState = true;
+            Boolean cachedBlock = null;
+            Integer cachedString = null;
+            if (needSyntax && globalLine >= localWindowStart && globalLine < localWindowEnd) {
+                cachedBlock = blockCommentEndStateCache.get(globalLine);
+                cachedString = stringEndStateCache.get(globalLine);
+                hasCachedState = cachedBlock != null && cachedString != null;
+            }
+            if (cachedSpans != null && (!needSyntax || hasCachedState)) {
+                if (needSyntax && cachedBlock != null && cachedString != null) {
+                    inBlock = cachedBlock;
+                    stringState = cachedString;
+                }
+                continue;
+            }
+
+            String line = getLineTextForRenderWithDirect(globalLine, directLines);
+            if (line == null) line = "";
+
+            List<HighlightSpan> spans;
+            if (needSyntax) {
+                LineParseResult parseResult = parseLineForSyntax(
+                        line,
+                        inBlock,
+                        stringState,
+                        stringRule,
+                        blockRule,
+                        true
+                );
+                spans = parseResult.spans;
+                inBlock = parseResult.endsInBlockComment;
+                stringState = parseResult.endsInStringState;
+                if (globalLine >= localWindowStart && globalLine < localWindowEnd) {
+                    if (isBlockCommentsEnabled) blockCommentEndStateCache.put(globalLine, inBlock);
+                    stringEndStateCache.put(globalLine, stringState);
+                }
+            } else {
+                spans = new ArrayList<>();
+            }
+
+            if (needRegex && !line.isEmpty()) {
+                for (HighlightRule rule : regexHighlightRules) {
+                    Matcher matcher = rule.pattern.matcher(line);
+                    while (matcher.find()) {
+                        if (matcher.start() == matcher.end()) continue;
+                        HighlightSpan span = new HighlightSpan(matcher.start(), matcher.end(), rule.paint);
+                        if (hasOverlap(span, spans)) continue;
+                        spans.add(span);
+                    }
+                }
+            }
+
+            if (spans.size() > 1) {
+                Collections.sort(spans, (s1, s2) -> Integer.compare(s1.start, s2.start));
+            }
+            highlightCache.put(globalLine, spans);
+        }
     }
 
     // --- Layout and Measurement ---
@@ -1432,16 +1633,17 @@ public class PopEditText extends View {
             }
 
             for (int i = firstVisibleLine; i <= lastVisibleLine; i++) {
-                String lineNum = String.valueOf(i + 1);
+                int start = writeIntToChars(i + 1, lineNumberChars);
+                int count = lineNumberChars.length - start;
                 float y = Math.round(((i + 1) * lineHeight) - paint.descent());
                 // Highlight the current cursor line number
                 if (i == cursorLine) {
                     int originalColor = lineNumbersPaint.getColor();
                     lineNumbersPaint.setColor(currentLineNumberColor);
-                    canvas.drawText(lineNum, lineNumX, y, lineNumbersPaint);
+                    canvas.drawText(lineNumberChars, start, count, lineNumX, y, lineNumbersPaint);
                     lineNumbersPaint.setColor(originalColor);
                 } else {
-                    canvas.drawText(lineNum, lineNumX, y, lineNumbersPaint);
+                    canvas.drawText(lineNumberChars, start, count, lineNumX, y, lineNumbersPaint);
                 }
             }
             canvas.restore();
@@ -1460,8 +1662,8 @@ public class PopEditText extends View {
         // --- This is the original text, selection, and handle drawing logic ---
         Paint selPaint = null;
         if (hasSelection) {
-            selPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            selPaint.setColor(selectionHighlightColor);
+            selectionPaint.setColor(selectionHighlightColor);
+            selPaint = selectionPaint;
         }
 
         java.util.HashMap<Integer, String> directLines = null;
@@ -1490,9 +1692,15 @@ public class PopEditText extends View {
             bracketMatch = findBracketMatchInVisible(firstVisibleLine, lastVisibleLine, directLines);
         }
 
+        ensureHighlightCacheForVisibleRange(firstVisibleLine, lastVisibleLine, directLines);
+
         BracketGuideState bracketGuideState = null;
         if (isBracketGuidesEnabled) {
-            HighlightLineState guideStart = getLineStateAtStart(firstVisibleLine);
+            Boolean cachedBlockPrev = blockCommentEndStateCache.get(firstVisibleLine - 1);
+            Integer cachedStringPrev = stringEndStateCache.get(firstVisibleLine - 1);
+            HighlightLineState guideStart = (cachedBlockPrev != null && cachedStringPrev != null)
+                    ? new HighlightLineState(cachedBlockPrev, cachedStringPrev)
+                    : getLineStateAtStart(firstVisibleLine);
             boolean guideBlock = guideStart.inBlockComment && isBlockCommentsEnabled;
             int guideString = guideStart.stringState;
             if (!isBlockCommentsEnabled) guideBlock = false;
@@ -1565,6 +1773,7 @@ public class PopEditText extends View {
             drawColorCodeBackgrounds(canvas, line, globalLine);
 
             drawHighlightedLine(canvas, line, globalLine, y);
+            drawWhitespaceGuidesForLine(canvas, line, globalLine, y);
 
             // Draw auto-completion suggestion
             drawAutoSuggestion(canvas, line, globalLine, y);
@@ -1577,36 +1786,41 @@ public class PopEditText extends View {
             drawBracketMatchForLine(canvas, line, globalLine, bracketMatch);
         }
 
-        if (isFocused() && !hasSelection) {
+        if (isFocused() && !hasSelection && cursorLine >= firstVisibleLine && cursorLine <= lastVisibleLine) {
             String cursorLineText = getLineTextForRender(cursorLine);
             int safeChar = Math.min(cursorChar, cursorLineText.length());
             float cursorX = measureText(cursorLineText, safeChar, cursorLine);
             float cursorY = cursorLine * lineHeight;
             if (isCursorVisible) {
-                Paint caretPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 caretPaint.setColor(cursorAndHandlesColor);
                 caretPaint.setStrokeWidth(cursorWidth);
                 canvas.drawLine(cursorX, cursorY, cursorX, cursorY + lineHeight, caretPaint);
             }
-            Paint handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             handlePaint.setColor(cursorAndHandlesColor);
             drawTeardropHandle(canvas, cursorX, cursorY + lineHeight, handlePaint);
             cursorHandleRect.set(cursorX - handleRadius, cursorY + lineHeight, cursorX + handleRadius, cursorY + lineHeight + handleRadius * 2);
         }
 
         if (hasSelection) {
-            Paint handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             handlePaint.setColor(cursorAndHandlesColor);
-            String startLineText = getLineTextForRender(selStartLine);
-            float startX = measureText(startLineText, Math.min(selStartChar, startLineText.length()), selStartLine);
-            float startY = selStartLine * lineHeight + lineHeight;
-            drawTeardropHandle(canvas, startX, startY, handlePaint);
-            leftHandleRect.set(startX - handleRadius, startY, startX + handleRadius, startY + handleRadius * 2);
-            String endLineText = getLineTextForRender(selEndLine);
-            float endX = measureText(endLineText, Math.min(selEndChar, endLineText.length()), selEndLine);
-            float endY = selEndLine * lineHeight + lineHeight;
-            drawTeardropHandle(canvas, endX, endY, handlePaint);
-            rightHandleRect.set(endX - handleRadius, endY, endX + handleRadius, endY + handleRadius * 2);
+            if (selStartLine >= firstVisibleLine && selStartLine <= lastVisibleLine) {
+                String startLineText = getLineTextForRender(selStartLine);
+                float startX = measureText(startLineText, Math.min(selStartChar, startLineText.length()), selStartLine);
+                float startY = selStartLine * lineHeight + lineHeight;
+                drawTeardropHandle(canvas, startX, startY, handlePaint);
+                leftHandleRect.set(startX - handleRadius, startY, startX + handleRadius, startY + handleRadius * 2);
+            } else {
+                leftHandleRect.setEmpty();
+            }
+            if (selEndLine >= firstVisibleLine && selEndLine <= lastVisibleLine) {
+                String endLineText = getLineTextForRender(selEndLine);
+                float endX = measureText(endLineText, Math.min(selEndChar, endLineText.length()), selEndLine);
+                float endY = selEndLine * lineHeight + lineHeight;
+                drawTeardropHandle(canvas, endX, endY, handlePaint);
+                rightHandleRect.set(endX - handleRadius, endY, endX + handleRadius, endY + handleRadius * 2);
+            } else {
+                rightHandleRect.setEmpty();
+            }
         }
 
         canvas.restore();
@@ -1618,18 +1832,15 @@ public class PopEditText extends View {
 
         if (showLoadingCircle) {
 
-            Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            circlePaint.setColor(loadingCircleColor);
-            circlePaint.setStyle(Paint.Style.STROKE);
-            circlePaint.setStrokeWidth(8f);
-            circlePaint.setStrokeCap(Paint.Cap.ROUND);
+            loadingCirclePaint.setColor(loadingCircleColor);
+            loadingCirclePaint.setStrokeWidth(8f);
             float centerX = getWidth() / 2f;
             float centerY = getHeight() / 2f;
             canvas.save();
             canvas.rotate(loadingCircleRotation, centerX, centerY);
-            RectF rect = new RectF(centerX - loadingCircleRadius, centerY - loadingCircleRadius,
+            loadingCircleRect.set(centerX - loadingCircleRadius, centerY - loadingCircleRadius,
                     centerX + loadingCircleRadius, centerY + loadingCircleRadius);
-            canvas.drawArc(rect, 0, 270, false, circlePaint);
+            canvas.drawArc(loadingCircleRect, 0, 270, false, loadingCirclePaint);
             canvas.restore();
         }
     }
@@ -1743,6 +1954,52 @@ public class PopEditText extends View {
         }
     }
 
+    private void drawWhitespaceGuidesForLine(Canvas canvas, String line, int globalLine, float y) {
+        if (!isWhitespaceGuidesEnabled || line.isEmpty()) return;
+        if (line.indexOf(' ') < 0 && line.indexOf('\t') < 0) return;
+
+        List<HighlightSpan> syntaxSpans = getWhitespaceGuideSyntaxSpans(line, globalLine);
+        boolean hasSyntaxSpans = !syntaxSpans.isEmpty();
+        whitespaceDrawState.syntaxIndex = 0;
+
+        List<HighlightSpan> visualSpans = highlightCache.get(globalLine);
+        if (visualSpans == null) {
+            visualSpans = calculateSpansForLine(line, globalLine);
+            highlightCache.put(globalLine, visualSpans);
+        }
+
+        float currentX = 0f;
+        int lastEnd = 0;
+
+        if (!visualSpans.isEmpty()) {
+            for (HighlightSpan span : visualSpans) {
+                if (span.start < lastEnd) continue;
+                if (span.start >= line.length()) break;
+
+                int safeSpanEnd = Math.min(span.end, line.length());
+                if (span.start > lastEnd) {
+                    currentX = drawWhitespaceGuidesSegment(
+                            canvas, line, lastEnd, span.start, currentX, y, paint,
+                            syntaxSpans, hasSyntaxSpans, whitespaceDrawState
+                    );
+                }
+
+                currentX = drawWhitespaceGuidesSegment(
+                        canvas, line, span.start, safeSpanEnd, currentX, y, span.paint,
+                        syntaxSpans, hasSyntaxSpans, whitespaceDrawState
+                );
+                lastEnd = safeSpanEnd;
+            }
+        }
+
+        if (lastEnd < line.length()) {
+            drawWhitespaceGuidesSegment(
+                    canvas, line, lastEnd, line.length(), currentX, y, paint,
+                    syntaxSpans, hasSyntaxSpans, whitespaceDrawState
+            );
+        }
+    }
+
     private float drawTextSegmentWithFade(
             Canvas canvas,
             String line,
@@ -1789,23 +2046,9 @@ public class PopEditText extends View {
         return currentX - x;
     }
 
-    private List<HighlightSpan> calculateSpansForLine(String line, int globalLine) {
-        List<HighlightSpan> spans = new ArrayList<>();
-        if (highlightRules.isEmpty()) {
-            return spans;
-        }
-
-        HighlightRule stringRule = null;
-        HighlightRule blockCommentRule = null;
-        List<HighlightRule> regexRules = new ArrayList<>();
-        for (HighlightRule rule : highlightRules) {
-            if (rule.type == HighlightRuleType.STRING && stringRule == null) {
-                stringRule = rule;
-            } else if (rule.type == HighlightRuleType.BLOCK_COMMENT && blockCommentRule == null) {
-                blockCommentRule = rule;
-            } else if (rule.type == HighlightRuleType.REGEX) {
-                regexRules.add(rule);
-            }
+    private List<HighlightSpan> calculateSyntaxSpansForLine(String line, int globalLine) {
+        if (line.isEmpty()) {
+            return Collections.emptyList();
         }
 
         HighlightLineState startState = getLineStateAtStart(globalLine);
@@ -1813,11 +2056,10 @@ public class PopEditText extends View {
                 line,
                 startState.inBlockComment,
                 startState.stringState,
-                stringRule,
-                blockCommentRule,
+                whitespaceStringRule,
+                whitespaceCommentRule,
                 true
         );
-        spans.addAll(parseResult.spans);
 
         if (globalLine >= windowStartLine
                 && globalLine < windowStartLine + linesWindow.size()) {
@@ -1827,8 +2069,164 @@ public class PopEditText extends View {
             stringEndStateCache.put(globalLine, parseResult.endsInStringState);
         }
 
-        if (!regexRules.isEmpty() && !line.isEmpty()) {
-            for (HighlightRule rule : regexRules) {
+        List<HighlightSpan> spans = parseResult.spans;
+        if (spans.size() > 1) {
+            Collections.sort(spans, (s1, s2) -> Integer.compare(s1.start, s2.start));
+        }
+        return spans;
+    }
+
+    private List<HighlightSpan> getWhitespaceGuideSyntaxSpans(String line, int globalLine) {
+        HighlightRule stringRule = stringHighlightRule;
+        HighlightRule commentRule = blockCommentHighlightRule;
+        if (stringRule == null && commentRule == null) {
+            return calculateSyntaxSpansForLine(line, globalLine);
+        }
+
+        List<HighlightSpan> spans = highlightCache.get(globalLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line, globalLine);
+            highlightCache.put(globalLine, spans);
+        }
+        if (spans.isEmpty()) return Collections.emptyList();
+
+        Paint stringPaint = (stringRule != null) ? stringRule.paint : null;
+        Paint commentPaint = (commentRule != null) ? commentRule.paint : null;
+        if (stringPaint == null && commentPaint == null) return Collections.emptyList();
+
+        ArrayList<HighlightSpan> syntaxSpans = null;
+        for (HighlightSpan span : spans) {
+            if (span.paint == stringPaint || span.paint == commentPaint) {
+                if (syntaxSpans == null) syntaxSpans = new ArrayList<>();
+                syntaxSpans.add(span);
+            }
+        }
+        return syntaxSpans != null ? syntaxSpans : Collections.emptyList();
+    }
+
+    private float drawWhitespaceGuidesSegment(
+            Canvas canvas,
+            String line,
+            int start,
+            int end,
+            float x,
+            float y,
+            Paint segmentPaint,
+            List<HighlightSpan> syntaxSpans,
+            boolean hasSyntaxSpans,
+            WhitespaceDrawState state
+    ) {
+        if (start >= end) return x;
+        int segLen = end - start;
+        if (whitespaceWidthBuffer == null || whitespaceWidthBuffer.length < segLen) {
+            whitespaceWidthBuffer = new float[segLen];
+        }
+        segmentPaint.getTextWidths(line, start, end, whitespaceWidthBuffer);
+
+        float currentX = x;
+        int localSyntaxIndex = hasSyntaxSpans ? state.syntaxIndex : 0;
+        HighlightSpan activeSyntax = hasSyntaxSpans && localSyntaxIndex < syntaxSpans.size()
+                ? syntaxSpans.get(localSyntaxIndex)
+                : null;
+
+        for (int i = 0; i < segLen; i++) {
+            int charIndex = start + i;
+            while (activeSyntax != null && charIndex >= activeSyntax.end) {
+                localSyntaxIndex++;
+                activeSyntax = localSyntaxIndex < syntaxSpans.size() ? syntaxSpans.get(localSyntaxIndex) : null;
+            }
+
+            boolean isInSyntaxSpan = activeSyntax != null && charIndex >= activeSyntax.start && charIndex < activeSyntax.end;
+            char c = line.charAt(charIndex);
+            if (!isInSyntaxSpan && c == ' ') {
+                int runStart = i;
+                int runEnd = i + 1;
+                float runWidth = whitespaceWidthBuffer[i];
+                for (int j = i + 1; j < segLen; j++) {
+                    int runCharIndex = start + j;
+                    while (activeSyntax != null && runCharIndex >= activeSyntax.end) {
+                        localSyntaxIndex++;
+                        activeSyntax = localSyntaxIndex < syntaxSpans.size() ? syntaxSpans.get(localSyntaxIndex) : null;
+                    }
+                    boolean inSyntax = activeSyntax != null
+                            && runCharIndex >= activeSyntax.start
+                            && runCharIndex < activeSyntax.end;
+                    if (inSyntax || line.charAt(runCharIndex) != ' ') break;
+                    runWidth += whitespaceWidthBuffer[j];
+                    runEnd = j + 1;
+                }
+
+                int spacesInRun = runEnd - runStart;
+                int step = Math.max(1, whitespaceGuideSpaceStep);
+                int remaining = spacesInRun;
+                int chunkStart = runStart;
+                float chunkX = currentX;
+                while (remaining > 0) {
+                    int chunkSize = Math.min(step, remaining);
+                    float chunkWidth = 0f;
+                    for (int k = 0; k < chunkSize; k++) {
+                        chunkWidth += whitespaceWidthBuffer[chunkStart + k];
+                    }
+                    if (chunkSize == step) {
+                        float glyphX = chunkX + Math.max(0f, (chunkWidth - whitespaceGuideSpaceWidth) * 0.5f);
+                        canvas.drawText(WHITESPACE_GUIDE_SPACE, glyphX, y, whitespaceGuidePaint);
+                    }
+                    chunkX += chunkWidth;
+                    chunkStart += chunkSize;
+                    remaining -= chunkSize;
+                }
+
+                currentX += runWidth;
+                i = runEnd - 1;
+                continue;
+            }
+
+            if (!isInSyntaxSpan && c == '\t') {
+                float charWidth = whitespaceWidthBuffer[i];
+                float glyphX = currentX + Math.max(0f, (charWidth - whitespaceGuideTabWidth) * 0.5f);
+                canvas.drawText(WHITESPACE_GUIDE_TAB, glyphX, y, whitespaceGuidePaint);
+            }
+            currentX += whitespaceWidthBuffer[i];
+        }
+
+        if (hasSyntaxSpans) {
+            state.syntaxIndex = localSyntaxIndex;
+        }
+        return currentX;
+    }
+
+    private List<HighlightSpan> calculateSpansForLine(String line, int globalLine) {
+        List<HighlightSpan> spans = new ArrayList<>();
+        if (highlightRules.isEmpty()) {
+            return spans;
+        }
+
+        HighlightRule stringRule = stringHighlightRule;
+        HighlightRule blockCommentRule = blockCommentHighlightRule;
+
+        if (stringRule != null || blockCommentRule != null) {
+            HighlightLineState startState = getLineStateAtStart(globalLine);
+            LineParseResult parseResult = parseLineForSyntax(
+                    line,
+                    startState.inBlockComment,
+                    startState.stringState,
+                    stringRule,
+                    blockCommentRule,
+                    true
+            );
+            spans.addAll(parseResult.spans);
+
+            if (globalLine >= windowStartLine
+                    && globalLine < windowStartLine + linesWindow.size()) {
+                if (isBlockCommentsEnabled) {
+                    blockCommentEndStateCache.put(globalLine, parseResult.endsInBlockComment);
+                }
+                stringEndStateCache.put(globalLine, parseResult.endsInStringState);
+            }
+        }
+
+        if (!regexHighlightRules.isEmpty() && !line.isEmpty()) {
+            for (HighlightRule rule : regexHighlightRules) {
                 Matcher matcher = rule.pattern.matcher(line);
                 while (matcher.find()) {
                     if (matcher.start() == matcher.end()) continue;
@@ -2566,40 +2964,57 @@ public class PopEditText extends View {
             return;
         }
 
-        Matcher matcher = COLOR_HEX_PATTERN.matcher(line);
-        while (matcher.find()) {
-            String colorString = matcher.group(0);
-            if (colorString == null || colorString.isEmpty()) continue;
+        if (line.indexOf('#') < 0 && line.indexOf('0') < 0) return;
 
-            int color;
-            try {
-                if (colorString.startsWith("0x") || colorString.startsWith("0X")) {
-                    String hex = colorString.substring(2);
-                    if (hex.length() == 6) {
-                        hex = "FF" + hex;
+        int[] triples = colorCodeBgCache.get(globalLine);
+        if (triples == null) {
+            ArrayList<Integer> tmp = null;
+            Matcher matcher = COLOR_HEX_PATTERN.matcher(line);
+            while (matcher.find()) {
+                String colorString = matcher.group(0);
+                if (colorString == null || colorString.isEmpty()) continue;
+
+                int color;
+                try {
+                    if (colorString.startsWith("0x") || colorString.startsWith("0X")) {
+                        String hex = colorString.substring(2);
+                        if (hex.length() == 6) hex = "FF" + hex;
+                        color = (int) Long.parseLong(hex, 16);
+                    } else {
+                        color = android.graphics.Color.parseColor(colorString);
                     }
-                    color = (int) Long.parseLong(hex, 16);
-                } else {
-                    color = android.graphics.Color.parseColor(colorString);
+                } catch (Exception e) {
+                    continue;
                 }
-            } catch (Exception e) { // NumberFormatException or IllegalArgumentException
-                continue; // Skip invalid color string
+
+                int backgroundColor = (color & 0x00FFFFFF) | (0xC0 << 24);
+                if (tmp == null) tmp = new ArrayList<>();
+                tmp.add(matcher.start());
+                tmp.add(matcher.end());
+                tmp.add(backgroundColor);
             }
+            if (tmp == null || tmp.isEmpty()) {
+                triples = new int[0];
+            } else {
+                triples = new int[tmp.size()];
+                for (int i = 0; i < tmp.size(); i++) triples[i] = tmp.get(i);
+            }
+            colorCodeBgCache.put(globalLine, triples);
+        }
 
-            // Use a semi-transparent background to avoid contrast issues
-            int backgroundColor = (color & 0x00FFFFFF) | (0xC0 << 24); // 75% opacity
-            colorOverlayPaint.setColor(backgroundColor);
-            colorOverlayPaint.setStyle(Paint.Style.FILL);
+        if (triples.length == 0) return;
 
-            int start = matcher.start();
-            int end = matcher.end();
+        float top = globalLine * lineHeight;
+        float bottom = (globalLine + 1) * lineHeight;
+        colorOverlayPaint.setStyle(Paint.Style.FILL);
+        for (int i = 0; i + 2 < triples.length; i += 3) {
+            int start = triples[i];
+            int end = triples[i + 1];
+            int backgroundColor = triples[i + 2];
 
             float left = measureText(line, start, globalLine);
             float right = measureText(line, end, globalLine);
-
-            float top = globalLine * lineHeight;
-            float bottom = (globalLine + 1) * lineHeight;
-
+            colorOverlayPaint.setColor(backgroundColor);
             canvas.drawRect(left, top, right, bottom, colorOverlayPaint);
         }
     }
