@@ -58,6 +58,10 @@ public class PopEditText extends View {
     public static final int STYLE_ITALIC = 2;
     public static final int STYLE_BOLD_ITALIC = 3;
 
+    public static final int SCROLL_MODE_SINGLE_AXIS = 0;
+    public static final int SCROLL_MODE_GRID = 1;
+    public static final int SCROLL_MODE_FREE = 2;
+
     // paint & metrics
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float lineHeight;
@@ -127,6 +131,8 @@ public class PopEditText extends View {
     private float lastFocusX, lastFocusY;
     private static final float MIN_TEXT_SIZE = 10f;
     private static final float MAX_TEXT_SIZE = 120f;
+    private float minZoomTextSizePx = MIN_TEXT_SIZE;
+    private float maxZoomTextSizePx = MAX_TEXT_SIZE;
 
     // caret
     private int cursorLine = 0;
@@ -218,6 +224,11 @@ public class PopEditText extends View {
     private boolean isBracketGuidesEnabled = false;
     private final Paint bracketGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float bracketGuideStrokeWidth = 2f;
+    private boolean isIndentGuidesEnabled = false;
+    private final Paint indentGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float indentGuideStrokeWidth = 2f;
+    private final java.util.ArrayList<int[]> indentGuideIntervals = new java.util.ArrayList<>();
+    private boolean indentGuideIntervalsDirty = true;
     private boolean isWhitespaceGuidesEnabled = false;
     private final Paint whitespaceGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float whitespaceGuideSpaceWidth = 0f;
@@ -242,10 +253,16 @@ public class PopEditText extends View {
     private final Paint popupTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint foldPlaceholderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint foldMarkerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint foldRipplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float foldMarkerGutterWidth = 0f;
     private float foldMarkerTextScale = 1f;
-    private float foldMarkerSpacing = 8f;
-    private float foldMarkerEdgePadding = 6f;
+    private float foldMarkerSpacing =0f;
+    private float foldMarkerEdgePadding = 4f;
+    private ValueAnimator foldRippleAnimator;
+    private int foldRippleLine = -1;
+    private float foldRippleRadius = 0f;
+    private float foldRippleAlpha = 0f;
+    private float foldRippleMaxRadius = 0f;
 
     // selection drawing (rounded)
     private final RectF selectionRectTmp = new RectF();
@@ -291,6 +308,8 @@ public class PopEditText extends View {
     private static final String WHITESPACE_GUIDE_SPACE = "\u00B7";
     private static final String WHITESPACE_GUIDE_TAB = "\u2192";
     private static final String FOLD_PLACEHOLDER_TEXT = "<—>";
+    private static final String INDENT_BLOCK_UNIT = "  ";
+    private static final int INDENT_FOLD_SCAN_LIMIT = 2000;
     private float foldPlaceholderCorner = 3f;
     private float foldPlaceholderPadX = 3f;
     private float foldPlaceholderPadY = 2f;
@@ -304,6 +323,7 @@ public class PopEditText extends View {
     private boolean isAutoPairingEnabled = false;
     private boolean isAutoBracketNewlineEnabled = false;
     private boolean isAutoBracketNewlineIndentEnabled = false;
+    private boolean isIndentationBlocksEnabled = false;
     private boolean isCodeFoldingEnabled = false;
     private int currentLineHighlightColor = 0x202196F3; // Default: translucent gray (more visible)
     private int currentLineNumberColor = 0xFF2196F3; // Default: same as cursor/handles color
@@ -401,6 +421,7 @@ public class PopEditText extends View {
 
     // --- Auto-completion State ---
     private boolean isAutoCompletionEnabled = false;
+    private boolean isAutoPathCompletionEnabled = false;
     private final Paint suggestionPaint = new Paint();
     private String activeSuggestion = null;
     private int activeSuggestionLine;
@@ -410,6 +431,12 @@ public class PopEditText extends View {
     private final RectF activeSuggestionRect = new RectF(); // For tap-to-accept
     private boolean isSuggestionTextSizeCustom = false; // Flag to track if suggestion text size is custom
     private boolean suggestionAcceptedThisTouch = false; // Flag to prevent GestureDetector interference
+    private String lastPathQuery = null;
+    private String lastPathSuggestion = null;
+    private int scrollMode = SCROLL_MODE_FREE;
+    private float scrollSensitivity = 1f;
+    private float flingSensitivity = 1f;
+    private int scrollLockAxis = 0; // 0 = none, 1 = horizontal, 2 = vertical
 
     private static class TrieNode {
         final Map<Character, TrieNode> children = new java.util.TreeMap<>();
@@ -527,15 +554,17 @@ public class PopEditText extends View {
         final char openChar;
         final char closeChar;
         final boolean isBlockComment;
+        final boolean isIndentFold;
         boolean collapsed;
 
-        FoldRange(int startLine, int endLine, int openCharIndex, char openChar, char closeChar, boolean isBlockComment) {
+        FoldRange(int startLine, int endLine, int openCharIndex, char openChar, char closeChar, boolean isBlockComment, boolean isIndentFold) {
             this.startLine = startLine;
             this.endLine = endLine;
             this.openCharIndex = openCharIndex;
             this.openChar = openChar;
             this.closeChar = closeChar;
             this.isBlockComment = isBlockComment;
+            this.isIndentFold = isIndentFold;
             this.collapsed = false;
         }
     }
@@ -661,6 +690,9 @@ public class PopEditText extends View {
         bracketGuidePaint.setColor(0xFF888888);
         bracketGuidePaint.setStyle(Paint.Style.STROKE);
         bracketGuidePaint.setStrokeWidth(bracketGuideStrokeWidth);
+        indentGuidePaint.setColor(0xFF555555);
+        indentGuidePaint.setStyle(Paint.Style.STROKE);
+        indentGuidePaint.setStrokeWidth(indentGuideStrokeWidth);
         whitespaceGuidePaint.setColor(0xFF555555);
         whitespaceGuidePaint.setStyle(Paint.Style.FILL);
         whitespaceGuidePaint.setUnderlineText(false);
@@ -688,8 +720,8 @@ public class PopEditText extends View {
         foldPlaceholderCorner = 6f * density;
         foldPlaceholderPadX = 6f * density;
         foldPlaceholderPadY = 2f * density;
-        foldMarkerSpacing = 8f * density;
-        foldMarkerEdgePadding = 6f * density;
+        foldMarkerSpacing = foldMarkerSpacing * density;
+        foldMarkerEdgePadding = foldMarkerEdgePadding * density;
 
         popupBgPaint.setColor(0xFF424242);
         popupTextPaint.setTextSize(30f);
@@ -701,6 +733,7 @@ public class PopEditText extends View {
         foldMarkerPaint.setColor(0xFF888888);
         foldMarkerPaint.setTextAlign(isRtl ? Paint.Align.LEFT : Paint.Align.RIGHT);
         foldMarkerPaint.setTextSize(paint.getTextSize());
+        foldRipplePaint.setStyle(Paint.Style.FILL);
 
         touchSlop = ViewConfiguration.get(ctx).getScaledTouchSlop();
         scroller = new OverScroller(ctx);
@@ -713,6 +746,7 @@ public class PopEditText extends View {
                     suggestionAcceptedThisTouch = false; // Reset the flag
                     // DON'T return false; proceed with normal onDown logic
                 }
+                scrollLockAxis = 0;
                 mJustFinishedScale = false;
                 commitComposing(false); // End any active composing when user touches view.
                 if (!scroller.isFinished()) {
@@ -806,6 +840,7 @@ public class PopEditText extends View {
                     float gy = e.getY() + scrollY;
                     int line = getGlobalLineForY(gy);
                     if (toggleFoldAtLine(line)) {
+                        startFoldMarkerRipple(line);
                         hidePopup();
                         invalidate();
                         return true;
@@ -815,6 +850,18 @@ public class PopEditText extends View {
                 int visibleIndex = Math.max(0, (int) (y / lineHeight));
                 float x = e.getX() + scrollX - getTextStartX();
                 int line = getGlobalLineForY(y);
+
+                if (isCodeFoldingEnabled) {
+                    String ln = getLineTextForRender(line);
+                    if (isFoldPlaceholderHit(line, ln, x)) {
+                        if (toggleFoldAtLine(line)) {
+                            startFoldMarkerRipple(line);
+                        }
+                        hidePopup();
+                        invalidate();
+                        return true;
+                    }
+                }
 
                 boolean afterEnd = isEof && line >= windowStartLine + linesWindow.size() && !linesWindow.isEmpty();
                 if (isCodeFoldingEnabled) {
@@ -867,8 +914,20 @@ public class PopEditText extends View {
                 if (suggestionAcceptedThisTouch) return false; // Don't process if suggestion was accepted
                 
                 movedSinceDown = true;
-                scrollY += distanceY;
-                scrollX += distanceX;
+                float dx = distanceX * scrollSensitivity;
+                float dy = distanceY * scrollSensitivity;
+                if (scrollMode == SCROLL_MODE_SINGLE_AXIS) {
+                    if (scrollLockAxis == 0) {
+                        scrollLockAxis = (Math.abs(dx) >= Math.abs(dy)) ? 1 : 2;
+                    }
+                    if (scrollLockAxis == 1) dy = 0f;
+                    else dx = 0f;
+                } else if (scrollMode == SCROLL_MODE_GRID) {
+                    if (Math.abs(dx) >= Math.abs(dy)) dy = 0f;
+                    else dx = 0f;
+                }
+                scrollY += dy;
+                scrollX += dx;
                 clampScrollY();
                 clampScrollX();
 
@@ -912,7 +971,18 @@ public class PopEditText extends View {
                 int maxY = Math.max(0, Math.round(maxScrollYFloat));
 
                 removeCallbacks(delayedWindowCheck);
-                scroller.fling(startX, startY, (int) -velocityX, (int) -velocityY, minX, maxX, minY, maxY);
+                float vx = velocityX * flingSensitivity;
+                float vy = velocityY * flingSensitivity;
+                if (scrollMode == SCROLL_MODE_SINGLE_AXIS) {
+                    int axis = scrollLockAxis;
+                    if (axis == 0) axis = (Math.abs(vx) >= Math.abs(vy)) ? 1 : 2;
+                    if (axis == 1) vy = 0f;
+                    else vx = 0f;
+                } else if (scrollMode == SCROLL_MODE_GRID) {
+                    if (Math.abs(vx) >= Math.abs(vy)) vy = 0f;
+                    else vx = 0f;
+                }
+                scroller.fling(startX, startY, (int) -vx, (int) -vy, minX, maxX, minY, maxY);
                 postInvalidateOnAnimation();
                 return true;
             }
@@ -973,10 +1043,10 @@ public class PopEditText extends View {
                 float currentSize = paint.getTextSize();
                 float newSize = currentSize * scale;
 
-                newSize = Math.max(MIN_TEXT_SIZE, Math.min(newSize, MAX_TEXT_SIZE));
+                newSize = Math.max(minZoomTextSizePx, Math.min(newSize, maxZoomTextSizePx));
 
                 if (Math.abs(newSize - currentSize) > 0.1f) {
-                    setTextSize(newSize);
+                    applyTextSizePx(newSize);
                     float newLineHeight = paint.getFontSpacing();
                     float effectiveScaleY = (oldLineHeight > 0) ? newLineHeight / oldLineHeight : 1f;
 
@@ -1046,6 +1116,31 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setAutoPathCompletionEnabled(boolean enabled) {
+        this.isAutoPathCompletionEnabled = enabled;
+        if (!enabled) {
+            clearActiveSuggestion();
+        }
+        invalidate();
+    }
+
+    public void setScrollMode(int mode) {
+        if (mode != SCROLL_MODE_SINGLE_AXIS && mode != SCROLL_MODE_GRID && mode != SCROLL_MODE_FREE) {
+            return;
+        }
+        this.scrollMode = mode;
+    }
+
+    public void setScrollSensitivity(float sensitivity) {
+        if (sensitivity <= 0f) return;
+        this.scrollSensitivity = sensitivity;
+    }
+
+    public void setFlingSensitivity(float sensitivity) {
+        if (sensitivity <= 0f) return;
+        this.flingSensitivity = sensitivity;
+    }
+
     public void setSuggestions(List<String> keywords, int color) {
         suggestionTrie.clear();
         if (keywords != null) {
@@ -1085,7 +1180,8 @@ public class PopEditText extends View {
     }
 
     public void setSuggestionTextSize(float size) {
-        suggestionPaint.setTextSize(size);
+        isSuggestionTextSizeCustom = true;
+        suggestionPaint.setTextSize(spToPx(size));
         invalidate();
     }
 
@@ -1100,11 +1196,6 @@ public class PopEditText extends View {
     }
 
     private void updateSuggestion() {
-        if (!isAutoCompletionEnabled) {
-            clearActiveSuggestion();
-            return;
-        }
-
         String line = getLineTextForRender(cursorLine);
 
         // Prevent suggestions inside syntax highlighting
@@ -1132,6 +1223,28 @@ public class PopEditText extends View {
                 clearActiveSuggestion();
                 return;
             }
+        }
+
+        if (isAutoPathCompletionEnabled) {
+            String pathFragment = getCurrentPathFragment();
+            if (!pathFragment.isEmpty()) {
+                String suggestion = findPathSuggestion(pathFragment);
+                if (suggestion != null && suggestion.length() > pathFragment.length()) {
+                    activeSuggestion = suggestion.substring(pathFragment.length());
+                    activeSuggestionLine = cursorLine;
+                    activeSuggestionCharStart = cursorChar - pathFragment.length();
+                    activeSuggestionWordFragment = pathFragment;
+                } else {
+                    clearActiveSuggestion();
+                }
+                invalidate();
+                return;
+            }
+        }
+
+        if (!isAutoCompletionEnabled) {
+            clearActiveSuggestion();
+            return;
         }
 
         String wordFragment = getCurrentWordFragment();
@@ -1163,6 +1276,158 @@ public class PopEditText extends View {
             start--;
         }
         return line.substring(start, cursorChar);
+    }
+
+    private String getCurrentPathFragment() {
+        String line = getLineTextForRender(cursorLine);
+        if (cursorChar == 0 || cursorChar > line.length()) {
+            return "";
+        }
+        int start = cursorChar;
+        while (start > 0 && isPathChar(line.charAt(start - 1))) {
+            start--;
+        }
+        String fragment = line.substring(start, cursorChar);
+        if (fragment.isEmpty()) return "";
+        if (fragment.startsWith("/") || fragment.startsWith("~") ||
+                fragment.startsWith("./") || fragment.startsWith("../") ||
+                fragment.contains("/")) {
+            return fragment;
+        }
+        return "";
+    }
+
+    private boolean isPathChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '/' || c == '.' || c == '_' || c == '-' || c == '~';
+    }
+
+    @Nullable
+    private String findPathSuggestion(String fragment) {
+        if (fragment.equals(lastPathQuery)) {
+            return lastPathSuggestion;
+        }
+
+        String expanded = fragment;
+        String home = getHomeDir();
+        if (fragment.startsWith("~") && home != null) {
+            if (fragment.equals("~")) {
+                expanded = home;
+            } else if (fragment.startsWith("~/")) {
+                expanded = home + fragment.substring(1);
+            }
+        }
+
+        int lastSlash = expanded.lastIndexOf('/');
+        String dirPart = lastSlash >= 0 ? expanded.substring(0, lastSlash) : "";
+        String prefix = lastSlash >= 0 ? expanded.substring(lastSlash + 1) : expanded;
+        File dir = resolveBaseDir(expanded, fragment, dirPart, home);
+        if (dir == null || !dir.exists() || !dir.isDirectory()) {
+            lastPathQuery = fragment;
+            lastPathSuggestion = null;
+            return null;
+        }
+
+        File[] entries = dir.listFiles();
+        if (entries == null || entries.length == 0) {
+            lastPathQuery = fragment;
+            lastPathSuggestion = null;
+            return null;
+        }
+
+        List<String> matches = new ArrayList<>();
+        boolean allowHidden = prefix.startsWith(".");
+        for (File entry : entries) {
+            String name = entry.getName();
+            if (!allowHidden && name.startsWith(".")) continue;
+            if (name.startsWith(prefix)) {
+                matches.add(entry.isDirectory() ? name + "/" : name);
+            }
+        }
+        String suggestion = null;
+        if (!matches.isEmpty()) {
+            Collections.sort(matches);
+            String chosen = chooseClosestPrefix(matches);
+            suggestion = fragment + chosen.substring(prefix.length());
+        } else {
+            String fallback = chooseClosestByCommonPrefix(entries, prefix, allowHidden);
+            if (fallback != null) {
+                suggestion = fragment + fallback;
+            }
+        }
+
+        lastPathQuery = fragment;
+        lastPathSuggestion = suggestion;
+        return suggestion;
+    }
+
+    @Nullable
+    private File resolveBaseDir(String expanded, String fragment, String dirPart, @Nullable String home) {
+        if (expanded.startsWith("/")) {
+            return new File(dirPart.isEmpty() ? "/" : dirPart);
+        }
+        if (fragment.startsWith("~") && home != null) {
+            return new File(dirPart.isEmpty() ? home : dirPart);
+        }
+        File base = getDefaultBaseDir();
+        if (base == null) return null;
+        return dirPart.isEmpty() ? base : new File(base, dirPart);
+    }
+
+    @Nullable
+    private File getDefaultBaseDir() {
+        if (sourceFile != null) {
+            File parent = sourceFile.getParentFile();
+            if (parent != null) return parent;
+        }
+        String home = getHomeDir();
+        if (home != null) return new File(home);
+        return new File("/");
+    }
+
+    @Nullable
+    private String getHomeDir() {
+        String home = System.getenv("HOME");
+        if (home == null || home.isEmpty()) {
+            home = System.getProperty("user.home");
+        }
+        return (home == null || home.isEmpty()) ? null : home;
+    }
+
+    private String chooseClosestPrefix(List<String> matches) {
+        String best = matches.get(0);
+        for (String name : matches) {
+            if (name.length() < best.length()) {
+                best = name;
+            } else if (name.length() == best.length() && name.compareTo(best) < 0) {
+                best = name;
+            }
+        }
+        return best;
+    }
+
+    @Nullable
+    private String chooseClosestByCommonPrefix(File[] entries, String prefix, boolean allowHidden) {
+        int bestScore = -1;
+        String bestName = null;
+        for (File entry : entries) {
+            String name = entry.getName();
+            if (!allowHidden && name.startsWith(".")) continue;
+            int score = commonPrefixLength(prefix, name);
+            if (score > bestScore) {
+                bestScore = score;
+                bestName = entry.isDirectory() ? name + "/" : name;
+            } else if (score == bestScore && bestName != null && name.compareTo(bestName) < 0) {
+                bestName = entry.isDirectory() ? name + "/" : name;
+            }
+        }
+        return (bestScore <= 0) ? null : bestName;
+    }
+
+    private int commonPrefixLength(String a, String b) {
+        int len = Math.min(a.length(), b.length());
+        int i = 0;
+        while (i < len && a.charAt(i) == b.charAt(i)) i++;
+        return i;
     }
 
     private void insertStringAtCursor(String text) {
@@ -1278,6 +1543,24 @@ public class PopEditText extends View {
         invalidate();
     }
 
+    public void setIndentGuidesEnabled(boolean enabled) {
+        if (this.isIndentGuidesEnabled == enabled) return;
+        this.isIndentGuidesEnabled = enabled;
+        invalidate();
+    }
+
+    public void setIndentGuidesColor(int color) {
+        indentGuidePaint.setColor(color);
+        invalidate();
+    }
+
+    public void setIndentGuidesStrokeWidth(float width) {
+        if (this.indentGuideStrokeWidth == width) return;
+        this.indentGuideStrokeWidth = width;
+        indentGuidePaint.setStrokeWidth(width);
+        invalidate();
+    }
+
     public void setWhitespaceGuidesEnabled(boolean enabled) {
         if (this.isWhitespaceGuidesEnabled == enabled) return;
         this.isWhitespaceGuidesEnabled = enabled;
@@ -1332,10 +1615,25 @@ public class PopEditText extends View {
         this.isAutoBracketNewlineIndentEnabled = enabled;
     }
 
+    public void setIndentationBlocksEnabled(boolean enabled) {
+        if (this.isIndentationBlocksEnabled == enabled) return;
+        this.isIndentationBlocksEnabled = enabled;
+        if (!enabled) {
+            foldRanges.entrySet().removeIf(e -> e.getValue().isIndentFold);
+        }
+        indentGuideIntervalsDirty = true;
+        foldIntervalsDirty = true;
+        invalidate();
+    }
+
     public void setCodeFoldingEnabled(boolean enabled) {
         if (this.isCodeFoldingEnabled == enabled) return;
         this.isCodeFoldingEnabled = enabled;
-        if (!enabled) foldRanges.clear();
+        if (!enabled) {
+            foldRanges.clear();
+            clearFoldRipple();
+        }
+        indentGuideIntervalsDirty = true;
         foldIntervalsDirty = true;
         invalidate();
     }
@@ -1519,24 +1817,32 @@ public class PopEditText extends View {
     }
     
     public void setTextSize(float size) {
-        float oldSize = paint.getTextSize();
-        if (Math.abs(size - oldSize) < 0.1f) return;
+        applyTextSizePx(spToPx(size));
+    }
 
-        paint.setTextSize(size);
+    private float spToPx(float sp) {
+        return sp * getResources().getDisplayMetrics().scaledDensity;
+    }
+
+    private void applyTextSizePx(float sizePx) {
+        float oldSize = paint.getTextSize();
+        if (Math.abs(sizePx - oldSize) < 0.1f) return;
+
+        paint.setTextSize(sizePx);
         // Only update suggestionPaint if it's not custom-set
         if (!isSuggestionTextSizeCustom) {
-            suggestionPaint.setTextSize(size);
+            suggestionPaint.setTextSize(sizePx);
         }
-        lineNumbersPaint.setTextSize(size);
-        foldMarkerPaint.setTextSize(size * foldMarkerTextScale);
+        lineNumbersPaint.setTextSize(sizePx);
+        foldMarkerPaint.setTextSize(sizePx * foldMarkerTextScale);
         lineHeight = paint.getFontSpacing();
         updateWhitespaceGuideMetrics();
 
         for (HighlightRule rule : highlightRules) {
-            rule.updateTextSize(size);
+            rule.updateTextSize(sizePx);
         }
-        if (whitespaceStringRule != null) whitespaceStringRule.updateTextSize(size);
-        if (whitespaceCommentRule != null) whitespaceCommentRule.updateTextSize(size);
+        if (whitespaceStringRule != null) whitespaceStringRule.updateTextSize(sizePx);
+        if (whitespaceCommentRule != null) whitespaceCommentRule.updateTextSize(sizePx);
         clearHighlightCaches();
 
         // Invalidate caches and approximate new max width
@@ -1545,7 +1851,7 @@ public class PopEditText extends View {
         }
         // Scale the max width instead of recalculating it synchronously.
         // This is an approximation but avoids massive lag.
-        float scale = size / oldSize;
+        float scale = sizePx / oldSize;
         currentMaxWindowLineWidth *= scale;
         globalMaxLineWidth *= scale;
 
@@ -1818,6 +2124,11 @@ public class PopEditText extends View {
             placeholderStart = prefix.length() + 2;
             placeholderEnd = placeholderStart + FOLD_PLACEHOLDER_TEXT.length();
             display = prefix + "/*" + FOLD_PLACEHOLDER_TEXT + "*/";
+        } else if (range.isIndentFold) {
+            String prefix = line;
+            placeholderStart = prefix.length();
+            placeholderEnd = placeholderStart + FOLD_PLACEHOLDER_TEXT.length();
+            display = prefix + FOLD_PLACEHOLDER_TEXT;
         } else {
             int safeIdx = Math.max(0, Math.min(range.openCharIndex, Math.max(0, line.length() - 1)));
             String prefix = line.substring(0, safeIdx + 1);
@@ -1837,28 +2148,167 @@ public class PopEditText extends View {
         FoldRange range = foldRanges.get(globalLine);
         if (range == null) return;
 
-        int[] bounds = new int[2];
-        String displayLine = buildFoldDisplayLine(line, range, bounds);
-
         float y = Math.round(getDrawLineTop(globalLine) + lineHeight - paint.descent());
-        float top = Math.round(getDrawLineTop(globalLine) + foldPlaceholderPadY);
-        float bottom = Math.round(getDrawLineBottom(globalLine) - foldPlaceholderPadY);
+        paint.getTextBounds(FOLD_PLACEHOLDER_TEXT, 0, FOLD_PLACEHOLDER_TEXT.length(), textBounds);
+        float top = Math.round(y + textBounds.top - foldPlaceholderPadY);
+        float bottom = Math.round(y + textBounds.bottom + foldPlaceholderPadY);
 
-        int startIdx = Math.min(bounds[0], displayLine.length());
-        float xStart;
+        int prefixEnd;
         if (range.isBlockComment) {
-            int openEnd = Math.min(range.openCharIndex + 2, line.length());
-            xStart = measureTextWithVisualSpaces(line, 0, openEnd, paint);
+            prefixEnd = Math.min(range.openCharIndex + 2, line.length());
+        } else if (range.isIndentFold) {
+            prefixEnd = line.length();
         } else {
-            int openEnd = Math.min(range.openCharIndex + 1, line.length());
-            xStart = measureTextWithVisualSpaces(line, 0, openEnd, paint);
+            prefixEnd = Math.min(range.openCharIndex + 1, line.length());
         }
-        float placeholderWidth = measureTextWithVisualSpaces(FOLD_PLACEHOLDER_TEXT, 0, FOLD_PLACEHOLDER_TEXT.length(), paint);
+
+        float xStart = measureHighlightedSegmentWidth(line, globalLine, 0, prefixEnd);
+        float placeholderWidth = Math.max(0f, paint.measureText(FOLD_PLACEHOLDER_TEXT));
         foldPlaceholderRect.set(xStart, top, xStart + placeholderWidth, bottom);
         canvas.drawRoundRect(foldPlaceholderRect, foldPlaceholderCorner, foldPlaceholderCorner, foldPlaceholderPaint);
 
+        drawHighlightedSegment(canvas, line, globalLine, 0, prefixEnd, 0f, y);
+
         paint.setUnderlineText(false);
-        canvas.drawText(displayLine, 0f, y, paint);
+        canvas.drawText(FOLD_PLACEHOLDER_TEXT, xStart, y, paint);
+
+        float xAfter = xStart + placeholderWidth;
+        if (range.isBlockComment) {
+            Paint commentPaint = (blockCommentHighlightRule != null) ? blockCommentHighlightRule.paint : paint;
+            commentPaint.setUnderlineText(false);
+            canvas.drawText("*/", xAfter, y, commentPaint);
+        } else if (!range.isIndentFold) {
+            canvas.drawText(String.valueOf(range.closeChar), xAfter, y, paint);
+        }
+    }
+
+    private boolean isFoldPlaceholderHit(int globalLine, @Nullable String line, float localX) {
+        if (!isCodeFoldingEnabled) return false;
+        FoldRange range = foldRanges.get(globalLine);
+        if (range == null || !range.collapsed) return false;
+        if (line == null) line = "";
+
+        int prefixEnd;
+        if (range.isBlockComment) {
+            prefixEnd = Math.min(range.openCharIndex + 2, line.length());
+        } else if (range.isIndentFold) {
+            prefixEnd = line.length();
+        } else {
+            prefixEnd = Math.min(range.openCharIndex + 1, line.length());
+        }
+        float xStart = measureHighlightedSegmentWidth(line, globalLine, 0, prefixEnd);
+        float placeholderWidth = Math.max(0f, paint.measureText(FOLD_PLACEHOLDER_TEXT));
+        float pad = Math.max(0f, foldPlaceholderPadX);
+        float left = xStart - pad;
+        float right = xStart + placeholderWidth + pad;
+        return localX >= left && localX <= right;
+    }
+
+    private void drawHighlightedSegment(
+            Canvas canvas,
+            String line,
+            int globalLine,
+            int start,
+            int end,
+            float x,
+            float y
+    ) {
+        if (line == null || line.isEmpty() || start >= end) return;
+        start = Math.max(0, Math.min(start, line.length()));
+        end = Math.max(start, Math.min(end, line.length()));
+        if (start >= end) return;
+
+        if (highlightRules.isEmpty()) {
+            paint.setUnderlineText(false);
+            canvas.drawText(line, start, end, x, y, paint);
+            return;
+        }
+
+        List<HighlightSpan> spans = highlightCache.get(globalLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line, globalLine);
+            highlightCache.put(globalLine, spans);
+        }
+
+        if (spans.isEmpty()) {
+            paint.setUnderlineText(false);
+            canvas.drawText(line, start, end, x, y, paint);
+            return;
+        }
+
+        float currentX = x;
+        int lastEnd = start;
+
+        for (HighlightSpan span : spans) {
+            if (lastEnd >= end) break;
+            if (span.start >= end) break;
+            if (span.start < lastEnd) continue;
+
+            if (span.start > lastEnd) {
+                paint.setUnderlineText(false);
+                canvas.drawText(line, lastEnd, span.start, currentX, y, paint);
+                currentX += paint.measureText(line, lastEnd, span.start);
+            }
+
+            int safeSpanEnd = Math.min(span.end, end);
+            if (safeSpanEnd > span.start) {
+                span.paint.setUnderlineText(false);
+                canvas.drawText(line, span.start, safeSpanEnd, currentX, y, span.paint);
+                currentX += span.paint.measureText(line, span.start, safeSpanEnd);
+            }
+            lastEnd = safeSpanEnd;
+        }
+
+        if (lastEnd < end) {
+            paint.setUnderlineText(false);
+            canvas.drawText(line, lastEnd, end, currentX, y, paint);
+        }
+    }
+
+    private float measureHighlightedSegmentWidth(String line, int globalLine, int start, int end) {
+        if (line == null || line.isEmpty() || start >= end) return 0f;
+        start = Math.max(0, Math.min(start, line.length()));
+        end = Math.max(start, Math.min(end, line.length()));
+        if (start >= end) return 0f;
+
+        if (highlightRules.isEmpty()) {
+            return paint.measureText(line, start, end);
+        }
+
+        List<HighlightSpan> spans = highlightCache.get(globalLine);
+        if (spans == null) {
+            spans = calculateSpansForLine(line, globalLine);
+            highlightCache.put(globalLine, spans);
+        }
+
+        if (spans.isEmpty()) {
+            return paint.measureText(line, start, end);
+        }
+
+        float total = 0f;
+        int lastEnd = start;
+
+        for (HighlightSpan span : spans) {
+            if (lastEnd >= end) break;
+            if (span.start >= end) break;
+            if (span.start < lastEnd) continue;
+
+            if (span.start > lastEnd) {
+                total += paint.measureText(line, lastEnd, span.start);
+            }
+
+            int safeSpanEnd = Math.min(span.end, end);
+            if (safeSpanEnd > span.start) {
+                total += span.paint.measureText(line, span.start, safeSpanEnd);
+            }
+            lastEnd = safeSpanEnd;
+        }
+
+        if (lastEnd < end) {
+            total += paint.measureText(line, lastEnd, end);
+        }
+
+        return total;
     }
 
     private String getFoldMarkerForLine(int line, @Nullable String lineText) {
@@ -1866,12 +2316,67 @@ public class PopEditText extends View {
         FoldRange range = foldRanges.get(line);
         if (range != null) return range.collapsed ? ">" : "v";
         if (lineText == null) return null;
-        if (!shouldShowFoldMarkerFromLine(lineText)) return null;
+        boolean isIndentCandidate = isIndentationBlocksEnabled && isIndentFoldCandidate(lineText);
+        if (!isIndentCandidate && !shouldShowFoldMarkerFromLine(lineText)) return null;
         FoldRange found = findFoldRangeForLine(line);
         if (found == null) return null;
         foldRanges.put(found.startLine, found);
+        if (found.isIndentFold) indentGuideIntervalsDirty = true;
         foldIntervalsDirty = true;
         return "v";
+    }
+
+    private boolean isIndentFoldCandidate(String line) {
+        if (line == null || line.isEmpty()) return false;
+        String trimmed = rstripWhitespace(line);
+        return !trimmed.isEmpty() && trimmed.endsWith(":");
+    }
+
+    private void startFoldMarkerRipple(int line) {
+        if (!isCodeFoldingEnabled || !showLineNumbers) return;
+        foldRippleLine = line;
+        float gutterWidth = foldMarkerGutterWidth;
+        if (gutterWidth <= 0f) {
+            gutterWidth = foldMarkerPaint.measureText("v") + foldMarkerSpacing + foldMarkerEdgePadding;
+        }
+        foldRippleMaxRadius = Math.max(lineHeight * 0.35f, Math.min(lineHeight * 0.6f, gutterWidth * 0.6f));
+        if (foldRippleAnimator != null) foldRippleAnimator.cancel();
+        foldRippleAnimator = ValueAnimator.ofFloat(0f, 1f);
+        foldRippleAnimator.setDuration(220);
+        foldRippleAnimator.addUpdateListener(a -> {
+            float t = (float) a.getAnimatedValue();
+            foldRippleRadius = foldRippleMaxRadius * t;
+            foldRippleAlpha = 0.35f * (1f - t);
+            invalidate();
+        });
+        foldRippleAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                foldRippleAlpha = 0f;
+                foldRippleRadius = 0f;
+                foldRippleLine = -1;
+                invalidate();
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                foldRippleAlpha = 0f;
+                foldRippleRadius = 0f;
+                foldRippleLine = -1;
+                invalidate();
+            }
+        });
+        foldRippleAnimator.start();
+    }
+
+    private void clearFoldRipple() {
+        if (foldRippleAnimator != null) {
+            foldRippleAnimator.cancel();
+            foldRippleAnimator = null;
+        }
+        foldRippleAlpha = 0f;
+        foldRippleRadius = 0f;
+        foldRippleLine = -1;
     }
 
     private boolean shouldShowFoldMarkerFromLine(String line) {
@@ -1891,9 +2396,7 @@ public class PopEditText extends View {
         return false;
     }
 
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+    private void drawContent(Canvas canvas) {
 
         // Calculate visible line range
         int firstVisibleIndex = (int) (scrollY / lineHeight);
@@ -1974,6 +2477,13 @@ public class PopEditText extends View {
                         float markerX = isRtl
                                 ? (getGutterStartX() + gutterSeparatorWidth + foldMarkerEdgePadding)
                                 : (getGutterStartX() + lineNumbersGutterWidth - gutterSeparatorWidth - foldMarkerEdgePadding);
+                        if (i == foldRippleLine && foldRippleAlpha > 0f) {
+                            int base = foldMarkerPaint.getColor();
+                            int alpha = Math.min(255, Math.max(0, (int) (255f * foldRippleAlpha)));
+                            foldRipplePaint.setColor((base & 0x00FFFFFF) | (alpha << 24));
+                            float centerY = Math.round(getDrawLineTop(i) + lineHeight * 0.5f);
+                            canvas.drawCircle(markerX, centerY, foldRippleRadius, foldRipplePaint);
+                        }
                         canvas.drawText(marker, markerX, y, foldMarkerPaint);
                     }
                 }
@@ -2076,6 +2586,7 @@ public class PopEditText extends View {
         }
 
         if (isCodeFoldingEnabled) {
+            if (indentGuideIntervalsDirty) rebuildIndentGuideIntervalsIfNeeded();
             for (int v = firstVisibleIndex; v <= lastVisibleIndex; v++) {
                 int globalLine = mapVisibleIndexToGlobal(v);
                 String line = getLineTextForRenderWithDirect(globalLine, directLines);
@@ -2152,12 +2663,14 @@ public class PopEditText extends View {
                         advanceBracketGuideStateForLine(hl, h, bracketGuideState);
                     }
                 }
+                drawIndentGuidesForLine(canvas, line, globalLine);
                 drawFoldedLine(canvas, line, globalLine);
                 continue;
             }
 
             drawHighlightedLine(canvas, line, globalLine, y);
             drawWhitespaceGuidesForLine(canvas, line, globalLine, y);
+            drawIndentGuidesForLine(canvas, line, globalLine);
 
             // Draw auto-completion suggestion
             drawAutoSuggestion(canvas, line, globalLine, y);
@@ -2170,6 +2683,7 @@ public class PopEditText extends View {
             drawBracketMatchForLine(canvas, line, globalLine, bracketMatch);
             }
         } else {
+            if (indentGuideIntervalsDirty) rebuildIndentGuideIntervalsIfNeeded();
             for (int globalLine = firstVisibleLine; globalLine <= lastVisibleLine; globalLine++) {
                 String line = getLineTextForRenderWithDirect(globalLine, directLines);
 
@@ -2238,6 +2752,7 @@ public class PopEditText extends View {
 
                 drawHighlightedLine(canvas, line, globalLine, y);
                 drawWhitespaceGuidesForLine(canvas, line, globalLine, y);
+                drawIndentGuidesForLine(canvas, line, globalLine);
 
                 // Draw auto-completion suggestion
                 drawAutoSuggestion(canvas, line, globalLine, y);
@@ -2310,6 +2825,12 @@ public class PopEditText extends View {
             canvas.drawArc(loadingCircleRect, 0, 270, false, loadingCirclePaint);
             canvas.restore();
         }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        drawContent(canvas);
     }
 
     private Paint getPaintForChar(int lineIndex, int charIndex, String lineText) {
@@ -3705,6 +4226,87 @@ public class PopEditText extends View {
         }
     }
 
+    private void drawIndentGuidesForLine(Canvas canvas, String line, int globalLine) {
+        if (!isIndentGuidesEnabled || !isIndentationBlocksEnabled) return;
+        if (!isLineInIndentBlock(globalLine)) return;
+        if (line == null || line.isEmpty()) return;
+        int unitSpaces = INDENT_BLOCK_UNIT.length();
+        if (unitSpaces <= 0) return;
+
+        float top = getDrawLineTop(globalLine);
+        float bottom = top + lineHeight;
+        int columns = 0;
+        int nextGuide = unitSpaces;
+        float x = 0f;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c != ' ' && c != '\t') break;
+            float adv = measureTextWithVisualSpaces(line, i, i + 1, paint);
+            if (c == '\t') {
+                columns += DEFAULT_TAB_SIZE_SPACES;
+            } else {
+                columns += 1;
+            }
+            x += adv;
+            while (columns >= nextGuide) {
+                if (isWhitespaceAtX(line, globalLine, x)) {
+                    canvas.drawLine(x, top, x, bottom, indentGuidePaint);
+                }
+                nextGuide += unitSpaces;
+            }
+        }
+    }
+
+    private boolean isLineInIndentBlock(int globalLine) {
+        if (!isIndentationBlocksEnabled) return false;
+        rebuildIndentGuideIntervalsIfNeeded();
+        if (indentGuideIntervals.isEmpty()) return false;
+        int lo = 0;
+        int hi = indentGuideIntervals.size() - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            int[] interval = indentGuideIntervals.get(mid);
+            if (globalLine < interval[0]) {
+                hi = mid - 1;
+            } else if (globalLine > interval[1]) {
+                lo = mid + 1;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void rebuildIndentGuideIntervalsIfNeeded() {
+        if (!indentGuideIntervalsDirty) return;
+        indentGuideIntervalsDirty = false;
+        indentGuideIntervals.clear();
+        if (!isIndentationBlocksEnabled || foldRanges.isEmpty()) return;
+        for (FoldRange range : foldRanges.values()) {
+            if (!range.isIndentFold) continue;
+            int start = range.startLine + 1;
+            int end = range.endLine;
+            if (end < start) continue;
+            indentGuideIntervals.add(new int[]{start, end});
+        }
+        if (indentGuideIntervals.isEmpty()) return;
+        Collections.sort(indentGuideIntervals, (a, b) -> Integer.compare(a[0], b[0]));
+        int write = 0;
+        int[] cur = indentGuideIntervals.get(0);
+        for (int i = 1; i < indentGuideIntervals.size(); i++) {
+            int[] nxt = indentGuideIntervals.get(i);
+            if (nxt[0] <= cur[1] + 1) {
+                cur[1] = Math.max(cur[1], nxt[1]);
+            } else {
+                indentGuideIntervals.set(write++, cur);
+                cur = nxt;
+            }
+        }
+        indentGuideIntervals.set(write++, cur);
+        while (indentGuideIntervals.size() > write) indentGuideIntervals.remove(indentGuideIntervals.size() - 1);
+    }
+
     private static int getFirstNonSpaceIndex(String line) {
         for (int i = 0; i < line.length(); i++) {
             if (!Character.isWhitespace(line.charAt(i))) return i;
@@ -4431,6 +5033,15 @@ public class PopEditText extends View {
         this.isZoomEnabled = enabled;
     }
 
+    public void setZoomTextSizeRange(float minSp, float maxSp) {
+        float minPx = spToPx(minSp);
+        float maxPx = spToPx(maxSp);
+        float min = Math.max(1f, Math.min(minPx, maxPx));
+        float max = Math.max(min, maxPx);
+        this.minZoomTextSizePx = min;
+        this.maxZoomTextSizePx = max;
+    }
+
     public void setDisable(boolean disable) {
         this.isDisabled = disable;
         // The keyboard should not be hidden automatically when the view is disabled
@@ -4734,6 +5345,18 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
             return;
         }
 
+        if (isIndentationBlocksEnabled) {
+            String ln = getLineTextForRender(cursorLine);
+            if (ln == null) ln = "";
+            int safeChar = Math.max(0, Math.min(cursorChar, ln.length()));
+            String before = ln.substring(0, safeChar);
+            String trimmed = rstripWhitespace(before);
+            String baseIndent = getLineLeadingWhitespace(cursorLine);
+            String extraIndent = trimmed.endsWith(":") ? INDENT_BLOCK_UNIT : "";
+            insertTextAtCursor("\n" + baseIndent + extraIndent);
+            return;
+        }
+
         if (isAutoBracketNewlineIndentEnabled) {
             String baseIndent = getLineLeadingWhitespace(cursorLine);
             insertTextAtCursor("\n" + baseIndent);
@@ -4754,6 +5377,33 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
         if (left == '(' && right == ')') return BracketPairType.ROUND;
         if (left == '[' && right == ']') return BracketPairType.SQUARE;
         return BracketPairType.NONE;
+    }
+
+    private static String rstripWhitespace(String text) {
+        if (text == null || text.isEmpty()) return "";
+        int end = text.length();
+        while (end > 0) {
+            char c = text.charAt(end - 1);
+            if (c != ' ' && c != '\t') break;
+            end--;
+        }
+        return (end == text.length()) ? text : text.substring(0, end);
+    }
+
+    private int getIndentWidth(String line) {
+        if (line == null || line.isEmpty()) return 0;
+        int width = 0;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == ' ') {
+                width++;
+            } else if (c == '\t') {
+                width += DEFAULT_TAB_SIZE_SPACES;
+            } else {
+                break;
+            }
+        }
+        return width;
     }
 
     private String getLineLeadingWhitespace(int line) {
@@ -6844,6 +7494,7 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
         if (created == null) return false;
         created.collapsed = true;
         foldRanges.put(created.startLine, created);
+        if (created.isIndentFold) indentGuideIntervalsDirty = true;
         foldIntervalsDirty = true;
         invalidate();
         return true;
@@ -6872,6 +7523,11 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
 
             if (inBlockComment || stringState != 0) return null;
 
+            if (isIndentationBlocksEnabled && isIndentFoldCandidate(ln)) {
+                FoldRange indentRange = findIndentFoldRangeForLine(line, raf);
+                if (indentRange != null) return indentRange;
+            }
+
             int scanIndex = 0;
             while (true) {
                 FoldToken token = findFoldTokenInLine(ln, scanIndex);
@@ -6880,7 +7536,7 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
                 if (token.isBlockComment) {
                     int endLine = findBlockCommentEndLine(line, token.index, raf);
                     if (endLine > line) {
-                        return new FoldRange(line, endLine, token.index, '/', '/', true);
+                        return new FoldRange(line, endLine, token.index, '/', '/', true, false);
                     }
                     scanIndex = token.index + 2;
                     continue;
@@ -6888,7 +7544,7 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
 
                 FoldMatch match = findMatchingBracketFrom(line, token.index, token.openChar, raf);
                 if (match != null && match.endLine > line) {
-                    return new FoldRange(line, match.endLine, token.index, token.openChar, match.closeChar, false);
+                    return new FoldRange(line, match.endLine, token.index, token.openChar, match.closeChar, false, false);
                 }
 
                 scanIndex = token.index + 1;
@@ -6922,6 +7578,39 @@ private void beginLargeEditUiIfNeeded(boolean enable, int sL, int eL, boolean is
             } catch (Exception ignored) {
                 return null;
             }
+        }
+        return null;
+    }
+
+    private FoldRange findIndentFoldRangeForLine(int line, @Nullable RandomAccessFile raf) {
+        if (!isIndentationBlocksEnabled) return null;
+        String ln = getLineTextForFoldScan(line, raf);
+        if (ln == null) return null;
+        String trimmed = rstripWhitespace(ln);
+        if (trimmed.isEmpty() || !trimmed.endsWith(":")) return null;
+
+        int baseIndent = getIndentWidth(ln);
+        int totalLines = getLinesCount();
+        if (totalLines <= 0) totalLines = Math.max(line + 1, windowStartLine + linesWindow.size());
+
+        int endLine = -1;
+        int scanEnd = Math.min(totalLines, line + INDENT_FOLD_SCAN_LIMIT);
+        for (int i = line + 1; i < scanEnd; i++) {
+            String next = getLineTextForFoldScan(i, raf);
+            if (next == null) break;
+            String nextTrimmed = rstripWhitespace(next);
+            if (nextTrimmed.isEmpty()) continue;
+            int indent = getIndentWidth(next);
+            if (indent <= baseIndent) {
+                endLine = i - 1;
+                break;
+            }
+            endLine = i;
+        }
+
+        if (endLine > line) {
+            int openIdx = Math.max(0, trimmed.length() - 1);
+            return new FoldRange(line, endLine, openIdx, ':', ':', false, true);
         }
         return null;
     }
